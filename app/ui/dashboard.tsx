@@ -6,11 +6,14 @@ import {
   CalendarDays,
   ChevronDown,
   Crown,
+  Flag,
   ListChecks,
   Loader2,
   Lock,
   LogOut,
   Medal,
+  Minus,
+  Plus,
   Save,
   Shield,
   Trophy,
@@ -49,12 +52,6 @@ const stageLabels = {
   final: "Final",
 } as const;
 
-const statusLabels = {
-  scheduled: "Agendado",
-  live: "Ao vivo",
-  finished: "Terminado",
-} as const;
-
 const knockoutStageOrder: Array<keyof typeof stageLabels> = [
   "roundOf32",
   "roundOf16",
@@ -70,6 +67,8 @@ type MatchRow = {
   _id: Id<"matches">;
   homeTeam: string;
   awayTeam: string;
+  homeTeamCode?: string;
+  awayTeamCode?: string;
   kickoffAt: number;
   stage: keyof typeof stageLabels;
   group?: string;
@@ -86,6 +85,79 @@ type MatchSection = {
   order: number;
   matches: MatchRow[];
 };
+
+type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+
+const flagCodeByTeamCode: Record<string, string> = {
+  ALB: "al",
+  ALG: "dz",
+  ARG: "ar",
+  AUT: "at",
+  AUS: "au",
+  BEL: "be",
+  BOL: "bo",
+  BIH: "ba",
+  BRA: "br",
+  BUL: "bg",
+  CMR: "cm",
+  CAN: "ca",
+  CHI: "cl",
+  CHN: "cn",
+  CIV: "ci",
+  COL: "co",
+  CRC: "cr",
+  CRO: "hr",
+  CZE: "cz",
+  DEN: "dk",
+  ECU: "ec",
+  EGY: "eg",
+  ENG: "gb-eng",
+  ESP: "es",
+  FRA: "fr",
+  GER: "de",
+  GHA: "gh",
+  GRE: "gr",
+  HUN: "hu",
+  IRL: "ie",
+  IRN: "ir",
+  ITA: "it",
+  JPN: "jp",
+  KOR: "kr",
+  MAR: "ma",
+  MEX: "mx",
+  NED: "nl",
+  NGA: "ng",
+  NIR: "gb-nir",
+  NOR: "no",
+  NZL: "nz",
+  PAR: "py",
+  PER: "pe",
+  POL: "pl",
+  POR: "pt",
+  QAT: "qa",
+  ROU: "ro",
+  RSA: "za",
+  SCO: "gb-sct",
+  SEN: "sn",
+  SRB: "rs",
+  SVK: "sk",
+  SVN: "si",
+  SWE: "se",
+  SUI: "ch",
+  TUN: "tn",
+  TUR: "tr",
+  UKR: "ua",
+  URU: "uy",
+  USA: "us",
+  WAL: "gb-wls",
+};
+
+function flagPath(code?: string) {
+  if (!code) return null;
+  const normalized = code.toUpperCase();
+  const flagCode = flagCodeByTeamCode[normalized] ?? normalized.toLowerCase();
+  return `/1x1/${flagCode}.svg`;
+}
 
 function formatKickoff(value: number) {
   return new Intl.DateTimeFormat("pt-PT", {
@@ -128,6 +200,29 @@ function groupMatchSections(matches: MatchRow[]) {
     .toSorted((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 }
 
+function sectionKeyForMatch(match: MatchRow) {
+  return match.stage === "group" ? `group-${match.group ?? "?"}` : match.stage;
+}
+
+function nextRelevantSectionKey(matches: MatchRow[], now: number) {
+  const liveMatch = matches
+    .filter((match) => match.displayStatus === "live")
+    .toSorted((a, b) => a.kickoffAt - b.kickoffAt)[0];
+  if (liveMatch) return sectionKeyForMatch(liveMatch);
+
+  const nextMatch = matches
+    .filter((match) => match.displayStatus === "scheduled" && match.kickoffAt >= now)
+    .toSorted((a, b) => a.kickoffAt - b.kickoffAt)[0];
+  if (nextMatch) return sectionKeyForMatch(nextMatch);
+
+  const lastMatch = matches.toSorted((a, b) => b.kickoffAt - a.kickoffAt)[0];
+  return lastMatch ? sectionKeyForMatch(lastMatch) : null;
+}
+
+function sectionTypeLabel(section: MatchSection) {
+  return section.key.startsWith("group-") ? "Grupo" : "Eliminatoria";
+}
+
 export function Dashboard() {
   const { signOut } = useAuthActions();
   const user = useQuery(api.betting.currentUser);
@@ -137,6 +232,7 @@ export function Dashboard() {
   const saveSpecialBet = useMutation(api.betting.saveSpecialBet);
   const [activeView, setActiveView] = useState<DashboardView>("games");
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set());
+  const [openMobileMatches, setOpenMobileMatches] = useState<Set<string>>(() => new Set());
   const [specialMessage, setSpecialMessage] = useState("");
   const [savingSpecial, setSavingSpecial] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -174,24 +270,39 @@ export function Dashboard() {
     }
   }
 
-  if (
+  const isLoading =
     user === undefined ||
     data === undefined ||
     leaderboard === undefined ||
-    catalog === undefined
-  ) {
+    catalog === undefined;
+  const matches = data
+    ? (data.matches as MatchRow[]).map((match) => ({
+        ...match,
+        displayStatus: displayStatusForPortugalTime(match, now),
+      }))
+    : [];
+  const sections = groupMatchSections(matches);
+  const nextSectionKey = nextRelevantSectionKey(matches, now);
+
+  useEffect(() => {
+    if (!nextSectionKey) return;
+    const timer = window.setTimeout(() => {
+      setOpenSections((current) => {
+        if (current.size > 0) return current;
+        return new Set([nextSectionKey]);
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [nextSectionKey]);
+
+  if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2]">
-        <Loader2 className="animate-spin text-[#16735f]" size={28} />
+        <Loader2 className="animate-spin text-[#1f5cff]" size={28} />
       </main>
     );
   }
 
-  const matches = (data.matches as MatchRow[]).map((match) => ({
-    ...match,
-    displayStatus: displayStatusForPortugalTime(match, now),
-  }));
-  const sections = groupMatchSections(matches);
   const firstKickoffAt =
     matches.length > 0
       ? matches.reduce(
@@ -224,20 +335,26 @@ export function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f2] text-[#18201b]">
-      <header className="border-b border-[#dfe5dc] bg-white">
+    <main className="min-h-screen bg-[#f4f7fb] pb-28 text-[#121826] [background-image:linear-gradient(90deg,rgba(31,92,255,.045)_1px,transparent_1px),linear-gradient(rgba(16,22,47,.035)_1px,transparent_1px)] [background-size:44px_44px] sm:pb-8">
+      <header className="border-b border-[#1f5cff]/40 bg-[#10162f] text-white shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-[#e11d48] via-[#f5c542] via-[#00a86b] to-[#1f5cff]" />
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#16735f]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-white/10 text-[#f5c542]">
+              <Trophy size={22} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5c542]">
               Mundial Bet 2026
             </p>
-            <h1 className="text-2xl font-semibold">Painel da liga</h1>
+              <h1 className="text-2xl font-semibold">Painel da liga</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {user?.isAdmin ? (
               <Link
                 href="/admin"
-                className="flex h-10 items-center gap-2 rounded-md border border-[#d7ded3] bg-white px-3 text-sm font-semibold hover:bg-[#eef2eb]"
+                className="flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white hover:bg-white/15"
               >
                 <Shield size={16} />
                 Admin
@@ -245,7 +362,7 @@ export function Dashboard() {
             ) : null}
             <button
               onClick={() => void signOut()}
-              className="flex h-10 items-center gap-2 rounded-md bg-[#18201b] px-3 text-sm font-semibold text-white hover:bg-[#2b3730]"
+              className="flex h-10 items-center gap-2 rounded-md bg-[#f5c542] px-3 text-sm font-bold text-[#10162f] hover:bg-[#e8b92f]"
             >
               <LogOut size={16} />
               Sair
@@ -255,48 +372,43 @@ export function Dashboard() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <nav className="grid gap-2 rounded-lg border border-[#d7ded3] bg-white p-2 sm:grid-cols-3">
-          <ViewButton
-            active={activeView === "games"}
-            icon={<ListChecks size={17} />}
-            label="Jogos"
-            meta={`${matches.length} jogos`}
-            onClick={() => setActiveView("games")}
+        <div className="hidden sm:block">
+          <DashboardDock
+            activeView={activeView}
+            matchCount={matches.length}
+            leaderboardCount={leaderboard.length}
+            specialPoints={data.specialPoints}
+            onViewChange={setActiveView}
           />
-          <ViewButton
-            active={activeView === "leaderboard"}
-            icon={<Crown size={17} />}
-            label="Leaderboard"
-            meta={`${leaderboard.length} jogadores`}
-            onClick={() => setActiveView("leaderboard")}
-          />
-          <ViewButton
-            active={activeView === "specials"}
-            icon={<Trophy size={17} />}
-            label="Especiais"
-            meta={`${data.specialPoints} pts`}
-            onClick={() => setActiveView("specials")}
-          />
-        </nav>
+        </div>
 
         <div className="mt-6">
           {activeView === "games" ? (
-            <section className="rounded-lg border border-[#d7ded3] bg-white p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-semibold">Jogos</h2>
-                  <p className="text-sm text-[#52605a]">
-                    Apostas abertas apenas enquanto o jogo esta agendado.
-                  </p>
-                </div>
-                <div className="rounded-md bg-[#eaf4ef] px-3 py-2 text-sm font-semibold text-[#16735f]">
-                  Exato 5 pts · Vencedor 3 pts
+            <section className="overflow-hidden rounded-lg border border-[#dbe4f0] bg-white shadow-sm">
+              <div className="relative border-b border-[#dbe4f0] bg-[#10162f] px-5 py-6 text-white">
+                <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.14)_1px,transparent_1px)] [background-size:36px_36px]" />
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-[#1f5cff]" />
+                <div className="relative flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#f5c542]">
+                      <Flag size={15} />
+                      Matchday
+                    </p>
+                    <h2 className="mt-1 text-2xl font-semibold">Jogos do Mundial</h2>
+                    <p className="mt-1 max-w-2xl text-sm text-white/75">
+                      Ajusta o resultado nos cards e guarda quando tiveres a certeza.
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-[#f5c542]/40 bg-[#f5c542] px-3 py-2 text-sm font-bold text-[#10162f] shadow-sm">
+                    Exato 5 pts · Vencedor 3 pts
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-5 space-y-2">
+              <div className="space-y-3 p-3 sm:p-5">
                 {sections.length === 0 ? (
-                  <p className="rounded-md border border-dashed border-[#cbd5c7] p-4 text-sm text-[#52605a]">
+                  <p className="rounded-md border border-dashed border-[#dbe4f0] p-4 text-sm text-[#5c667a]">
                     Ainda nao ha jogos. Um admin pode criar equipas, jogadores e jogos.
                   </p>
                 ) : (
@@ -306,28 +418,37 @@ export function Dashboard() {
                       section={section}
                       isOpen={openSections.has(section.key)}
                       onToggle={() => toggleSection(section.key)}
+                      openMobileMatches={openMobileMatches}
+                      onMatchToggle={(matchId) =>
+                        setOpenMobileMatches((current) => {
+                          const next = new Set(current);
+                          if (next.has(matchId)) next.delete(matchId);
+                          else next.add(matchId);
+                          return next;
+                        })
+                      }
                     />
                   ))
                 )}
+                {sections.length > 0 ? (
+                  <p className="mt-4 text-xs font-medium text-[#5c667a]">
+                    {openSectionCount === 0
+                      ? "Escolhe um grupo ou fase para abrir."
+                      : `${openSectionCount} seccao aberta${openSectionCount > 1 ? "s" : ""}.`}
+                  </p>
+                ) : null}
               </div>
-              {sections.length > 0 ? (
-                <p className="mt-4 text-xs font-medium text-[#52605a]">
-                  {openSectionCount === 0
-                    ? "Escolhe um grupo ou fase para abrir."
-                    : `${openSectionCount} seccao aberta${openSectionCount > 1 ? "s" : ""}.`}
-                </p>
-              ) : null}
             </section>
           ) : null}
 
           {activeView === "leaderboard" ? (
-            <section className="rounded-lg border border-[#d7ded3] bg-white p-5">
+            <section className="rounded-lg border border-[#dbe4f0] bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Crown className="text-[#b88716]" size={20} />
+                  <Crown className="text-[#f5c542]" size={20} />
                   <h2 className="text-xl font-semibold">Leaderboard</h2>
                 </div>
-                <div className="rounded-md bg-[#eef2eb] px-3 py-2 text-sm font-semibold text-[#52605a]">
+                <div className="rounded-md bg-[#f4f7fb] px-3 py-2 text-sm font-semibold text-[#5c667a]">
                   {leaderboard.length} jogadores
                 </div>
               </div>
@@ -347,7 +468,7 @@ export function Dashboard() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">Apostas especiais</h2>
-                <p className="text-sm text-[#52605a]">
+                <p className="text-sm text-[#5c667a]">
                   Disponiveis ate ao inicio do primeiro jogo.
                 </p>
               </div>
@@ -360,8 +481,8 @@ export function Dashboard() {
               <p
                 className={`mt-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
                   specialBetsAreOpen
-                    ? "bg-[#eaf4ef] text-[#16735f]"
-                    : "bg-[#eef2eb] text-[#52605a]"
+                    ? "bg-[#eef4ff] text-[#1f5cff]"
+                    : "bg-[#f4f7fb] text-[#5c667a]"
                 }`}
               >
                 {!specialBetsAreOpen ? <Lock size={15} /> : <CalendarDays size={15} />}
@@ -401,7 +522,7 @@ export function Dashboard() {
                     min={0}
                     defaultValue={data.specialBet?.[name] ?? 0}
                     disabled={!specialBetsAreOpen}
-                    className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
+                    className="mt-2 h-10 w-full rounded-md border border-[#dbe4f0] px-3 outline-none ring-[#1f5cff]/20 focus:border-[#1f5cff] focus:ring-4"
                     required
                   />
                 </label>
@@ -412,13 +533,13 @@ export function Dashboard() {
               <button
                 type="submit"
                 disabled={savingSpecial || !canUseSpecials}
-                className="flex h-10 items-center gap-2 rounded-md bg-[#16735f] px-4 text-sm font-semibold text-white hover:bg-[#0f5d4d] disabled:opacity-60"
+                className="flex h-10 items-center gap-2 rounded-md bg-[#1f5cff] px-4 text-sm font-semibold text-white hover:bg-[#194bd1] disabled:opacity-60"
               >
                 {savingSpecial ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 Guardar especiais
               </button>
               {specialMessage ? (
-                <span className="text-sm text-[#52605a]">{specialMessage}</span>
+                <span className="text-sm text-[#5c667a]">{specialMessage}</span>
               ) : null}
               {!canUseSpecials ? (
                 <span className="text-sm text-[#9a6a18]">
@@ -432,19 +553,121 @@ export function Dashboard() {
           ) : null}
         </div>
       </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center border-t border-[#dbe4f0] bg-[#f4f7fb]/85 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:hidden">
+        <DashboardDock
+          activeView={activeView}
+          matchCount={matches.length}
+          leaderboardCount={leaderboard.length}
+          specialPoints={data.specialPoints}
+          onViewChange={setActiveView}
+          compact
+        />
+      </div>
     </main>
   );
 }
 
-function ViewButton({
+function DashboardDock({
+  activeView,
+  matchCount,
+  leaderboardCount,
+  specialPoints,
+  onViewChange,
+  compact = false,
+}: {
+  activeView: DashboardView;
+  matchCount: number;
+  leaderboardCount: number;
+  specialPoints: number;
+  onViewChange: (view: DashboardView) => void;
+  compact?: boolean;
+}) {
+  const items = [
+    {
+      id: "games",
+      label: "Jogos",
+      eyebrow: "Matchday",
+      meta: `${matchCount} jogos`,
+      description: "Grupos, fases e palpites",
+      icon: ListChecks,
+      active: activeView === "games",
+      accent: "#1f5cff",
+      onClick: () => onViewChange("games"),
+    },
+    {
+      id: "leaderboard",
+      label: "Leaderboard",
+      eyebrow: "Classificacao",
+      meta: `${leaderboardCount} jogadores`,
+      description: "Pontos e ranking da liga",
+      icon: Crown,
+      active: activeView === "leaderboard",
+      accent: "#f5c542",
+      onClick: () => onViewChange("leaderboard"),
+    },
+    {
+      id: "specials",
+      label: "Especiais",
+      eyebrow: "Bola de ouro",
+      meta: `${specialPoints} pts`,
+      description: "Campeao, MVP e extras",
+      icon: Trophy,
+      active: activeView === "specials",
+      accent: "#00a86b",
+      onClick: () => onViewChange("specials"),
+    },
+  ];
+
+  return (
+    <nav
+      aria-label="Navegacao principal"
+      className={
+        compact
+          ? "w-full max-w-sm rounded-2xl border border-[#dbe4f0] bg-white/90 p-1.5 shadow-xl shadow-[#10162f]/15 backdrop-blur"
+          : "rounded-2xl border border-[#dbe4f0] bg-white/85 p-2 shadow-lg shadow-[#10162f]/10 backdrop-blur"
+      }
+    >
+      <div className={compact ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-3 gap-2"}>
+        {items.map((item) => (
+          <DockNavButton
+            key={item.id}
+            active={item.active}
+            compact={compact}
+            description={item.description}
+            eyebrow={item.eyebrow}
+            icon={item.icon}
+            label={item.label}
+            meta={item.meta}
+            accent={item.accent}
+            onClick={item.onClick}
+          />
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function DockNavButton({
   active,
-  icon,
+  compact,
+  accent,
+  description,
+  eyebrow,
+  icon: Icon,
   label,
   meta,
   onClick,
 }: {
   active: boolean;
-  icon: React.ReactNode;
+  compact: boolean;
+  accent: string;
+  description: string;
+  eyebrow: string;
+  icon: React.ComponentType<{
+    size?: number;
+    className?: string;
+    style?: React.CSSProperties;
+  }>;
   label: string;
   meta: string;
   onClick: () => void;
@@ -452,26 +675,56 @@ function ViewButton({
   return (
     <button
       type="button"
+      aria-label={`${label}: ${meta}`}
       onClick={onClick}
-      className={`flex min-h-16 items-center gap-3 rounded-md px-4 py-3 text-left transition ${
+      style={{ "--dock-accent": accent } as React.CSSProperties}
+      className={`relative overflow-hidden rounded-xl transition ${
         active
-          ? "bg-[#16735f] text-white shadow-sm"
-          : "text-[#52605a] hover:bg-[#eef2eb] hover:text-[#18201b]"
-      }`}
+          ? "bg-[#10162f] text-white shadow-md"
+          : "bg-[#f7f9fd] text-[#5c667a] hover:bg-white hover:text-[#121826]"
+      } ${compact ? "flex min-h-16 flex-col items-center justify-center px-2 py-2 text-center" : "flex min-h-20 items-center gap-3 px-4 py-3 text-left"}`}
     >
+      {!compact ? (
+        <span
+          className="absolute inset-x-0 top-0 h-1"
+          style={{ backgroundColor: active ? accent : "#dbe4f0" }}
+        />
+      ) : null}
       <span
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${
-          active ? "bg-white/15" : "bg-[#eef2eb]"
-        }`}
+        className={`flex shrink-0 items-center justify-center rounded-md ${
+          compact ? "h-8 w-8" : "h-10 w-10"
+        } ${active ? "bg-white/10" : "bg-white"}`}
       >
-        {icon}
+        <Icon
+          size={compact ? 19 : 21}
+          style={{ color: accent }}
+        />
       </span>
-      <span className="min-w-0">
-        <span className="block font-semibold">{label}</span>
-        <span className={`block text-xs ${active ? "text-white/80" : "text-[#718078]"}`}>
-          {meta}
+      <span className={compact ? "mt-1 block" : "min-w-0"}>
+        {!compact ? (
+          <span
+            className="mb-0.5 block text-[10px] font-bold uppercase tracking-[0.16em]"
+            style={{ color: accent }}
+          >
+            {eyebrow}
+          </span>
+        ) : null}
+        <span className={`${compact ? "text-xs" : "block text-lg"} font-black leading-tight`}>
+          {label}
+        </span>
+        <span className={`${compact ? "text-[10px]" : "mt-0.5 block truncate text-xs"} ${active ? "text-white/70" : "text-[#5c667a]"}`}>
+          {compact ? meta : description}
         </span>
       </span>
+      {!compact ? (
+        <span
+          className={`absolute right-4 top-4 rounded-md px-2 py-1 text-xs font-bold ${
+            active ? "bg-white/10 text-white/80" : "bg-white text-[#5c667a]"
+          }`}
+        >
+          {meta}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -480,53 +733,89 @@ function MatchSectionPanel({
   section,
   isOpen,
   onToggle,
+  openMobileMatches,
+  onMatchToggle,
 }: {
   section: MatchSection;
   isOpen: boolean;
   onToggle: () => void;
+  openMobileMatches: Set<string>;
+  onMatchToggle: (matchId: string) => void;
 }) {
   const openMatches = section.matches.filter((match) => match.displayStatus === "scheduled").length;
   const liveMatches = section.matches.filter((match) => match.displayStatus === "live").length;
+  const betMatches = section.matches.filter((match) => match.bet !== null).length;
+  const predictionProgress = Math.round((betMatches / section.matches.length) * 100);
+  const firstKickoff = formatKickoff(section.matches[0].kickoffAt);
+  const typeLabel = sectionTypeLabel(section);
 
   return (
-    <section className="rounded-md border border-[#edf1ea]">
+    <section className="overflow-hidden rounded-lg border border-[#dbe4f0] bg-white shadow-sm">
       <button
         type="button"
         onClick={onToggle}
-        className="grid w-full gap-3 px-4 py-3 text-left transition hover:bg-[#f8faf6] sm:grid-cols-[1fr_auto]"
+        className="group relative grid w-full gap-4 overflow-hidden px-4 py-4 text-left transition hover:bg-[#fbfcf8] lg:grid-cols-[1fr_320px]"
         aria-expanded={isOpen}
       >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eef2eb] text-[#16735f]">
+        <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-[#1f5cff]" />
+        <span className="flex min-w-0 items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-[#dbe4f0] bg-[#eef4ff] text-[#1f5cff] shadow-sm">
             <ChevronDown
-              size={17}
+              size={19}
               className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
             />
           </span>
           <span className="min-w-0">
-            <span className="block font-semibold">{section.title}</span>
-            <span className="block text-xs text-[#52605a]">
-              {section.matches.length} jogos · primeiro: {formatKickoff(section.matches[0].kickoffAt)}
+            <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[#1f5cff]">
+              {typeLabel}
+            </span>
+            <span className="mt-1 block text-2xl font-black text-[#121826]">{section.title}</span>
+            <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-[#5c667a]">
+              <span>{section.matches.length} jogo{section.matches.length > 1 ? "s" : ""}</span>
+              <span className="text-[#a0aaa4]">·</span>
+              <span>primeiro: {firstKickoff}</span>
             </span>
           </span>
         </span>
-        <span className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#52605a] sm:justify-end">
-          {openMatches > 0 ? (
-            <span className="rounded bg-[#eaf4ef] px-2 py-1 text-[#16735f]">
-              {openMatches} aberto{openMatches > 1 ? "s" : ""}
+        <span className="grid content-center gap-3">
+          <span className="flex flex-wrap items-center gap-2 text-xs font-bold lg:justify-end">
+            {openMatches > 0 ? (
+              <span className="rounded-md border border-[#cfe0ff] bg-[#eef4ff] px-2.5 py-1.5 text-[#1f5cff]">
+                {openMatches} aberto{openMatches > 1 ? "s" : ""}
+              </span>
+            ) : null}
+            {liveMatches > 0 ? (
+              <span className="rounded-md border border-[#f1ddb2] bg-[#fff3d7] px-2.5 py-1.5 text-[#9a6a18]">
+                {liveMatches} ao vivo
+              </span>
+            ) : null}
+            <span className="rounded-md border border-[#dbe4f0] bg-[#f4f7fb] px-2.5 py-1.5 text-[#5c667a]">
+              {betMatches}/{section.matches.length} palpites
             </span>
-          ) : null}
-          {liveMatches > 0 ? (
-            <span className="rounded bg-[#fff3d7] px-2 py-1 text-[#9a6a18]">
-              {liveMatches} ao vivo
+          </span>
+          <span className="grid gap-1">
+            <span className="flex items-center justify-between text-xs font-semibold text-[#5c667a]">
+              <span>Progresso dos palpites</span>
+              <span>{predictionProgress}%</span>
             </span>
-          ) : null}
+            <span className="h-2 overflow-hidden rounded-full bg-[#e5ebf5]">
+              <span
+                className="block h-full rounded-full bg-[#1f5cff] transition-all"
+                style={{ width: `${predictionProgress}%` }}
+              />
+            </span>
+          </span>
         </span>
       </button>
       {isOpen ? (
-        <div className="grid gap-3 border-t border-[#edf1ea] bg-white p-3">
+        <div className="grid gap-3 border-t border-[#e4ebf5] bg-[#f7f9fd] p-3 sm:p-4">
           {section.matches.map((match) => (
-            <MatchBetForm key={match._id} match={match} />
+            <MatchBetForm
+              key={match._id}
+              match={match}
+              isMobileOpen={openMobileMatches.has(match._id)}
+              onToggle={() => onMatchToggle(match._id)}
+            />
           ))}
         </div>
       ) : null}
@@ -570,9 +859,9 @@ function LeaderboardRow({
               label: "Terceiro",
             }
           : {
-              row: "border-[#edf1ea] bg-white",
-              badge: "bg-[#eef2eb] text-[#52605a]",
-              icon: "text-[#52605a]",
+              row: "border-[#e4ebf5] bg-white",
+              badge: "bg-[#f4f7fb] text-[#5c667a]",
+              icon: "text-[#5c667a]",
               label: null,
             };
 
@@ -589,12 +878,12 @@ function LeaderboardRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-lg font-semibold">{row.username}</p>
           {podium.label ? (
-            <span className="rounded px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#52605a]">
+            <span className="rounded px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#5c667a]">
               {podium.label}
             </span>
           ) : null}
         </div>
-        <p className="text-sm text-[#52605a]">
+        <p className="text-sm text-[#5c667a]">
           Jogos {row.matchPoints} · Especiais {row.specialPoints} · Exatos {row.exactMatches}
         </p>
       </div>
@@ -626,7 +915,7 @@ function OptionSelect({
         name={name}
         defaultValue={defaultValue}
         disabled={disabled}
-        className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
+        className="mt-2 h-10 w-full rounded-md border border-[#dbe4f0] bg-white px-3 outline-none ring-[#1f5cff]/20 focus:border-[#1f5cff] focus:ring-4"
         required
       >
         <option value="" disabled>
@@ -642,111 +931,395 @@ function OptionSelect({
   );
 }
 
-function MatchBetForm({ match }: { match: MatchRow }) {
+function MatchBetForm({
+  match,
+  isMobileOpen,
+  onToggle,
+}: {
+  match: MatchRow;
+  isMobileOpen: boolean;
+  onToggle: () => void;
+}) {
   const saveMatchBet = useMutation(api.betting.saveMatchBet);
+  const savedHomeScore = match.bet?.homeScore;
+  const savedAwayScore = match.bet?.awayScore;
+  const [homeScore, setHomeScore] = useState(savedHomeScore ?? 0);
+  const [awayScore, setAwayScore] = useState(savedAwayScore ?? 0);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const [message, setMessage] = useState("");
-  const [pending, setPending] = useState(false);
   const isBettingOpen = match.displayStatus === "scheduled";
+  const hasBet = match.bet !== null;
+  const hasUnsavedChanges =
+    isBettingOpen && (savedHomeScore !== homeScore || savedAwayScore !== awayScore);
+  const isFinished = match.displayStatus === "finished";
+  let feedback = hasBet ? "Palpite guardado" : "Escolhe o resultado";
+  if (isFinished) {
+    feedback = `+${match.bet?.points ?? 0} pts`;
+  } else if (!isBettingOpen) {
+    feedback = hasBet ? `Palpite: ${savedHomeScore} - ${savedAwayScore}` : "Sem palpite";
+  } else if (saveState === "saving") {
+    feedback = "A guardar...";
+  } else if (saveState === "saved") {
+    feedback = "Guardado";
+  } else if (saveState === "dirty") {
+    feedback = "Alteracoes por guardar";
+  } else if (saveState === "error") {
+    feedback = message || "Nao foi possivel guardar.";
+  }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
+  async function savePrediction() {
+    if (!isBettingOpen || !hasUnsavedChanges) return;
+    setSaveState("saving");
     setMessage("");
-
-    const formData = new FormData(event.currentTarget);
     try {
       await saveMatchBet({
         matchId: match._id,
-        homeScore: toNumber(formData.get("homeScore")),
-        awayScore: toNumber(formData.get("awayScore")),
+        homeScore,
+        awayScore,
       });
-      setMessage("Aposta guardada.");
+      setSaveState("saved");
     } catch (caught) {
+      setSaveState("error");
       setMessage(caught instanceof Error ? caught.message : "Nao foi possivel guardar.");
-    } finally {
-      setPending(false);
     }
   }
 
+  function markEditing(nextHomeScore: number, nextAwayScore: number) {
+    setMessage("");
+    setSaveState(
+      savedHomeScore === nextHomeScore && savedAwayScore === nextAwayScore ? "idle" : "dirty",
+    );
+  }
+
+  function updateHomeScore(nextValue: number) {
+    const nextScore = Math.max(0, nextValue);
+    markEditing(nextScore, awayScore);
+    setHomeScore(nextScore);
+  }
+
+  function updateAwayScore(nextValue: number) {
+    const nextScore = Math.max(0, nextValue);
+    markEditing(homeScore, nextScore);
+    setAwayScore(nextScore);
+  }
+
   return (
-    <form
-      onSubmit={onSubmit}
-      className="grid gap-4 rounded-lg border border-[#edf1ea] p-4 md:grid-cols-[1fr_auto]"
-    >
-      <div>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-[#52605a]">
-          <CalendarDays size={16} />
-          {formatKickoff(match.kickoffAt)}
-          <StatusBadge status={match.displayStatus} />
+    <article className="overflow-hidden rounded-lg border border-[#d7e1d3] bg-white shadow-sm transition hover:border-[#b9cab4] hover:shadow-md">
+      <div className="grid gap-3 p-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+        <TeamMatchSide align="left" name={match.homeTeam} code={match.homeTeamCode} />
+
+        <div
+          className={`rounded-lg border p-2 shadow-inner lg:min-w-[230px] ${
+            !isBettingOpen && !isFinished && !hasBet
+              ? "border-[#f1ddb2] bg-[#fffaf0]"
+              : "border-[#dbe4f0] bg-[#f7f9fd]"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2">
+            {isFinished ? (
+              <ResultScore homeScore={match.homeScore} awayScore={match.awayScore} />
+            ) : !isBettingOpen ? (
+              <PredictionScore bet={match.bet} />
+            ) : (
+              <ScoreStepper
+                homeScore={homeScore}
+                awayScore={awayScore}
+                homeTeam={match.homeTeam}
+                awayTeam={match.awayTeam}
+                disabled={!isBettingOpen}
+                onHomeChange={updateHomeScore}
+                onAwayChange={updateAwayScore}
+              />
+            )}
+          </div>
+          {isFinished ? (
+            <div className="mt-2 flex justify-center">
+              <span className="rounded-md bg-[#f5c542] px-3 py-1 text-sm font-black text-[#10162f]">
+                {feedback}
+              </span>
+            </div>
+          ) : (
+            <p
+              className={`mt-2 text-center text-xs font-semibold ${
+                saveState === "error"
+                  ? "text-[#9a3a18]"
+                  : saveState === "saved"
+                    ? "text-[#00a86b]"
+                    : saveState === "dirty"
+                      ? "text-[#9a6a18]"
+                      : "text-[#5c667a]"
+              }`}
+            >
+              {feedback}
+            </p>
+          )}
+          {isBettingOpen ? (
+            <button
+              type="button"
+              onClick={() => void savePrediction()}
+              disabled={!hasUnsavedChanges || saveState === "saving"}
+              className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#f5c542] px-3 text-sm font-bold text-[#10162f] hover:bg-[#e8b92f] disabled:bg-[#d8dee9] disabled:text-[#6b7280]"
+            >
+              {saveState === "saving" ? (
+                <Loader2 className="animate-spin" size={15} />
+              ) : null}
+              Guardar palpite
+            </button>
+          ) : null}
         </div>
-        <h3 className="mt-2 text-lg font-semibold">
-          {match.homeTeam} vs {match.awayTeam}
-        </h3>
-        {match.displayStatus === "finished" ? (
-          <p className="mt-1 text-sm font-semibold text-[#16735f]">
-            Final: {match.homeScore} - {match.awayScore} · Ganhaste{" "}
-            {match.bet?.points ?? 0} pts
-          </p>
-        ) : message ? (
-          <p className="mt-1 text-sm text-[#52605a]">{message}</p>
-        ) : !isBettingOpen ? (
-          <p className="mt-1 flex items-center gap-1 text-sm text-[#9a6a18]">
-            <Lock size={14} />
-            Apostas fechadas.
-          </p>
+
+        <TeamMatchSide align="right" name={match.awayTeam} code={match.awayTeamCode} />
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-[#e4ebf5] pt-3 text-xs font-semibold text-[#5c667a] lg:col-span-3">
+          <MatchStatePill status={match.displayStatus} kickoffAt={match.kickoffAt} />
+          {!isBettingOpen && !isFinished && !hasBet ? (
+            <span className="flex items-center gap-1 rounded bg-[#fff3d7] px-2 py-1 text-[#9a6a18]">
+              <Lock size={13} />
+              Sem voto
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={onToggle}
+            className="ml-auto rounded px-2 py-1 text-[#1f5cff] hover:bg-[#eef4ff] md:hidden"
+            aria-expanded={isMobileOpen}
+          >
+            {isMobileOpen ? "Menos info" : "Mais info"}
+          </button>
+        </div>
+
+        {isMobileOpen ? (
+          <div className="rounded-md border border-[#e4ebf5] bg-[#f7f9fd] px-3 py-2 text-sm text-[#5c667a] md:hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              <span>{formatKickoff(match.kickoffAt)}</span>
+            </div>
+            <p className="mt-1 font-semibold text-[#121826]">
+              {isFinished ? `Ganhaste ${feedback}` : feedback}
+            </p>
+          </div>
         ) : null}
       </div>
-
-      <div className="flex items-end gap-2">
-        <label>
-          <span className="sr-only">{match.homeTeam}</span>
-          <input
-            name="homeScore"
-            type="number"
-            min={0}
-            defaultValue={match.bet?.homeScore ?? 0}
-            disabled={!isBettingOpen}
-            className="h-10 w-16 rounded-md border border-[#d7ded3] text-center outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 disabled:bg-[#eef2eb]"
-            required
-          />
-        </label>
-        <span className="pb-2 font-semibold">-</span>
-        <label>
-          <span className="sr-only">{match.awayTeam}</span>
-          <input
-            name="awayScore"
-            type="number"
-            min={0}
-            defaultValue={match.bet?.awayScore ?? 0}
-            disabled={!isBettingOpen}
-            className="h-10 w-16 rounded-md border border-[#d7ded3] text-center outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 disabled:bg-[#eef2eb]"
-            required
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={pending || !isBettingOpen}
-          className="flex h-10 w-10 items-center justify-center rounded-md bg-[#16735f] text-white hover:bg-[#0f5d4d] disabled:bg-[#a8b5ae]"
-          aria-label="Guardar aposta"
-        >
-          {pending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-        </button>
-      </div>
-    </form>
+    </article>
   );
 }
 
-function StatusBadge({ status }: { status: keyof typeof statusLabels }) {
-  const className =
-    status === "scheduled"
-      ? "bg-[#eaf4ef] text-[#16735f]"
-      : status === "live"
-        ? "bg-[#fff3d7] text-[#9a6a18]"
-        : "bg-[#eef2eb] text-[#52605a]";
+function TeamMatchSide({
+  name,
+  code,
+  align,
+}: {
+  name: string;
+  code?: string;
+  align: "left" | "right";
+}) {
+  return (
+    <span
+      className={`flex min-w-0 items-center gap-3 ${align === "right" ? "md:flex-row-reverse md:text-right" : ""}`}
+    >
+      <FlagTile code={code} name={name} />
+      <span className="min-w-0">
+        <span className="block truncate text-base font-bold text-[#121826]">{name}</span>
+        <span className="mt-1 inline-flex rounded bg-[#f4f7fb] px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#5c667a]">
+          {code ?? "TBD"}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function ScoreStepper({
+  homeScore,
+  awayScore,
+  homeTeam,
+  awayTeam,
+  disabled,
+  onHomeChange,
+  onAwayChange,
+}: {
+  homeScore: number;
+  awayScore: number;
+  homeTeam: string;
+  awayTeam: string;
+  disabled: boolean;
+  onHomeChange: (value: number) => void;
+  onAwayChange: (value: number) => void;
+}) {
+  return (
+    <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <ScoreStepperSide
+        label={homeTeam}
+        value={homeScore}
+        disabled={disabled}
+        onChange={onHomeChange}
+      />
+      <span className="text-lg font-black text-[#5c667a]">-</span>
+      <ScoreStepperSide
+        label={awayTeam}
+        value={awayScore}
+        disabled={disabled}
+        onChange={onAwayChange}
+      />
+    </div>
+  );
+}
+
+function ScoreStepperSide({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <button
+        type="button"
+        onClick={() => onChange(value - 1)}
+        disabled={disabled || value <= 0}
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dbe4f0] bg-white text-[#1f5cff] hover:bg-[#eef4ff] disabled:bg-[#eef2f7] disabled:text-[#a1a9b8]"
+        aria-label={`Diminuir golos de ${label}`}
+      >
+        <Minus size={15} />
+      </button>
+      <output
+        aria-label={`Golos de ${label}`}
+        className="flex h-10 min-w-11 items-center justify-center rounded-md bg-[#10162f] px-3 text-xl font-black text-white shadow-inner"
+      >
+        {value}
+      </output>
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        disabled={disabled}
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dbe4f0] bg-white text-[#1f5cff] hover:bg-[#eef4ff] disabled:bg-[#eef2f7] disabled:text-[#a1a9b8]"
+        aria-label={`Aumentar golos de ${label}`}
+      >
+        <Plus size={15} />
+      </button>
+    </div>
+  );
+}
+
+function ResultScore({
+  homeScore,
+  awayScore,
+}: {
+  homeScore?: number;
+  awayScore?: number;
+}) {
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#10162f] px-3 text-2xl font-black text-white">
+        {homeScore ?? "-"}
+      </span>
+      <span className="text-lg font-black text-[#5c667a]">-</span>
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#10162f] px-3 text-2xl font-black text-white">
+        {awayScore ?? "-"}
+      </span>
+    </div>
+  );
+}
+
+function PredictionScore({
+  bet,
+}: {
+  bet: MatchRow["bet"];
+}) {
+  return bet ? (
+    <div className="flex items-center justify-center gap-3">
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#f4f7fb] px-3 text-2xl font-black text-[#121826]">
+        {bet.homeScore}
+      </span>
+      <span className="text-lg font-black text-[#5c667a]">-</span>
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#f4f7fb] px-3 text-2xl font-black text-[#121826]">
+        {bet.awayScore}
+      </span>
+    </div>
+  ) : (
+    <div className="relative flex items-center justify-center gap-3 rounded-md border border-dashed border-[#f1ddb2] bg-white/60 px-3 py-2">
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#f4f7fb] px-3 text-2xl font-black text-[#a1a9b8]">
+        -
+      </span>
+      <span className="text-lg font-black text-[#a1a9b8]">-</span>
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#f4f7fb] px-3 text-2xl font-black text-[#a1a9b8]">
+        -
+      </span>
+      <span className="absolute rounded-md bg-[#fff3d7] px-2 py-1 text-xs font-black uppercase tracking-[0.1em] text-[#9a6a18] shadow-sm">
+        Sem voto
+      </span>
+    </div>
+  );
+}
+
+function MatchStatePill({
+  status,
+  kickoffAt,
+}: {
+  status: DisplayMatchStatus;
+  kickoffAt: number;
+}) {
+  const style =
+  status === "scheduled"
+    ? {
+        box: "border-blue-200 bg-blue-50 text-blue-700",
+        dot: "bg-blue-500",
+        label: "Agendado",
+      }
+    : status === "live"
+      ? {
+          box: "border-green-200 bg-green-50 text-green-700",
+          dot: "bg-green-500",
+          label: "Ao vivo",
+        }
+      : {
+          box: "border-neutral-200 bg-neutral-50 text-neutral-500",
+          dot: "bg-neutral-400",
+          label: "Terminado",
+        };
 
   return (
-    <span className={`rounded px-2 py-1 text-xs font-semibold ${className}`}>
-      {statusLabels[status]}
+    <span
+      className={`inline-flex items-center gap-2 rounded-md border px-2 py-1 ${style.box}`}
+    >
+      <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+      <span>{style.label}</span>
+      <span className="text-current/70">·</span>
+      <CalendarDays size={13} />
+      <span>{formatKickoff(kickoffAt)}</span>
+    </span>
+  );
+}
+
+function FlagTile({
+  code,
+  name,
+}: {
+  code?: string;
+  name: string;
+}) {
+  const path = flagPath(code);
+
+  return (
+    <span
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-[#d8e2d4] bg-white p-1 shadow-sm"
+    >
+      {path ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={path}
+          alt={`Bandeira ${name}`}
+          className="h-full w-full rounded-[4px] object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <span className="text-sm font-bold uppercase tracking-[0.12em] text-[#5c667a]">
+          {code?.slice(0, 3) ?? "TBD"}
+        </span>
+      )}
     </span>
   );
 }
