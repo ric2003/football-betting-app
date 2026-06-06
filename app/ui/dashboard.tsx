@@ -740,10 +740,10 @@ function GameRulesPanel({
   onCollapsedChange: (isCollapsed: boolean) => void;
 }) {
   const rules = [
-    "As apostas contam apenas para os primeiros 90 minutos, sem prolongamento.",
-    "Apostas especiais devem ser feitas antes do primeiro jogo do Mundial.",
-    "So podes apostar num jogo antes de ele comecar.",
-    "Em caso de empate na classificacao, ganha quem tiver mais resultados exatos.",
+    "As Apostas contam apenas para os primeiros 90 minutos, sem prolongamento e penáltis.",
+    "Apostas Especiais devem ser feitas antes do primeiro jogo do Mundial.",
+    "Só podes apostar num jogo antes de ele começar.",
+    "Em caso de empate na classificação, ganha quem tiver mais Resultados Exatos.",
   ];
 
   return (
@@ -757,18 +757,18 @@ function GameRulesPanel({
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-black uppercase tracking-[0.14em] text-[#16735f] dark:text-primary">
-              Regras do jogo
+              Regras do Jogo
             </span>
-            <span className="rounded bg-[#eaf4ef] px-2 py-1 text-xs font-bold text-[#16735f] dark:bg-secondary dark:text-primary">
-              3 pts resultado certo
+            <span className="rounded bg-[#eaf4ef] px-2 py-1 text-xs font-bold text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
+              3 pts Resultado Certo
             </span>
             <span className="rounded bg-[#fff3d7] px-2 py-1 text-xs font-bold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
-              5 pts resultado exato
+              5 pts Resultado Exato
             </span>
           </span>
           <span className="mt-1 block text-sm text-[#52605a] dark:text-muted-foreground">
-            Palpites antes do apito inicial, especiais antes do primeiro jogo,
-            desempate por exatos.
+            Apostas antes do apito inicial, Apostas Especiais antes do primeiro jogo,
+            desempate por Resultados Exatos.
           </span>
         </span>
         <span className="flex items-center gap-2 text-sm font-semibold text-[#16735f] dark:text-primary">
@@ -1106,7 +1106,7 @@ function LeaderboardRow({
             </span>
           ) : null}
           {isCurrentUser ? (
-            <span className="rounded bg-[#dff3ea] px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:bg-primary/15 dark:text-primary">
+            <span className="rounded bg-[#dff3ea] px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
               Tu
             </span>
           ) : null}

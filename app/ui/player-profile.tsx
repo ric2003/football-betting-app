@@ -23,12 +23,12 @@ type ProfileMatch = ProfileData["matches"][number];
 type SpecialBreakdown = ProfileData["specialBreakdown"][number];
 
 const stageLabels = {
-  group: "Fase de grupos",
-  roundOf32: "16 avos de final",
-  roundOf16: "Oitavos de final",
-  quarterFinal: "Quartos de final",
-  semiFinal: "Meias-finais",
-  thirdPlace: "3o lugar",
+  group: "Fase de Grupos",
+  roundOf32: "16 Avos de Final",
+  roundOf16: "Oitavos de Final",
+  quarterFinal: "Quartos de Final",
+  semiFinal: "Meias-Finais",
+  thirdPlace: "3º Lugar",
   final: "Final",
 } as const;
 
@@ -64,11 +64,11 @@ export function PlayerProfile({ userId }: { userId: string }) {
             className="inline-flex items-center gap-2 text-sm font-bold text-[#16735f] dark:text-primary"
           >
             <ArrowLeft size={16} />
-            Voltar ao leaderboard
+            Voltar ao Leaderboard
           </Link>
           <h1 className="mt-5 text-2xl font-black">Perfil nao encontrado</h1>
           <p className="mt-2 text-sm text-[#52605a] dark:text-muted-foreground">
-            Este jogador nao existe ou ja nao esta disponivel.
+            Este jogador não existe ou já não esta disponivel.
           </p>
         </div>
       </main>
@@ -90,11 +90,11 @@ export function PlayerProfile({ userId }: { userId: string }) {
           <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#16735f] dark:text-primary">
-                Perfil do jogador
+                Perfil do Jogador
               </p>
               <h1 className="mt-1 text-3xl font-black">{profile.user.username}</h1>
               <p className="mt-2 max-w-2xl text-sm text-[#52605a] dark:text-muted-foreground">
-                So aparecem palpites de jogos que ja comecaram. Jogos futuros ficam escondidos para ninguem copiar.
+                Só aparecem Apostas de jogos que já começaram. Jogos futuros ficam escondidos para ninguém copiar as Apostas.
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-md bg-[#16735f] px-4 py-3 font-black text-white">
@@ -116,27 +116,27 @@ export function PlayerProfile({ userId }: { userId: string }) {
         {profile.hiddenMatchCount > 0 ? (
           <p className="mt-4 flex items-center gap-2 rounded-md border border-[#f1ddb2] bg-[#fffaf0] px-3 py-2 text-sm font-semibold text-[#8a5d12] dark:border-[#9a6a18]/50 dark:bg-[#2a2114] dark:text-[#f5c542]">
             <EyeOff size={16} />
-            {profile.hiddenMatchCount} jogo{profile.hiddenMatchCount > 1 ? "s" : ""} ainda escondido{profile.hiddenMatchCount > 1 ? "s" : ""}.
+            {profile.hiddenMatchCount} Jogo{profile.hiddenMatchCount > 1 ? "s" : ""} ainda escondido{profile.hiddenMatchCount > 1 ? "s" : ""}.
           </p>
         ) : null}
 
         <section className="mt-6 rounded-lg border border-[#d7ded3] bg-white p-4 shadow-sm dark:border-border dark:bg-card sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black">Resultados dos jogos</h2>
+              <h2 className="text-xl font-black">Resultados dos Jogos</h2>
               <p className="text-sm text-[#52605a] dark:text-muted-foreground">
-                Certo vale 3 pts, exato vale 5 pts.
+                Certo vale 3 pts, Exato vale 5 pts.
               </p>
             </div>
             <span className="rounded-md bg-[#eef2eb] px-3 py-2 text-sm font-bold text-[#52605a] dark:bg-secondary dark:text-muted-foreground">
-              {profile.matches.length} visiveis
+              {profile.matches.length} Visíveis
             </span>
           </div>
 
           <div className="mt-4 grid gap-3">
             {profile.matches.length === 0 ? (
               <p className="rounded-md border border-dashed border-[#cbd5c7] bg-[#fbfcfa] p-4 text-sm text-[#52605a] dark:border-border dark:bg-secondary dark:text-muted-foreground">
-                Ainda nao ha jogos comecados para mostrar.
+                Ainda não há jogos ao vivo ou terminados para mostrar.
               </p>
             ) : (
               profile.matches.map((match) => <ProfileMatchRow key={match._id} match={match} />)
@@ -147,9 +147,9 @@ export function PlayerProfile({ userId }: { userId: string }) {
         <section className="mt-6 rounded-lg border border-[#d7ded3] bg-white p-4 shadow-sm dark:border-border dark:bg-card sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black">Apostas especiais</h2>
+              <h2 className="text-xl font-black">Apostas Especiais</h2>
               <p className="text-sm text-[#52605a] dark:text-muted-foreground">
-                So sao reveladas quando houver resultado oficial.
+                Só são reveladas quando houver resultado oficial.
               </p>
             </div>
             <span className="rounded-md bg-[#fff3d7] px-3 py-2 text-sm font-bold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
@@ -166,7 +166,7 @@ export function PlayerProfile({ userId }: { userId: string }) {
               <p className="rounded-md border border-dashed border-[#cbd5c7] bg-[#fbfcfa] p-4 text-sm text-[#52605a] dark:border-border dark:bg-secondary dark:text-muted-foreground md:col-span-2">
                 {profile.specialsAreResolved
                   ? "Sem apostas especiais registadas."
-                  : "Os especiais ainda estao escondidos."}
+                  : "As Apostas Especiais ainda estão escondidas."}
               </p>
             )}
           </div>
