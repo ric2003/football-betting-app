@@ -417,7 +417,7 @@ export function Dashboard() {
                   <p className="mt-4 text-xs font-medium text-[#52605a] dark:text-muted-foreground">
                     {openSectionCount === 0
                       ? "Escolhe um grupo ou fase para abrir."
-                      : `${openSectionCount} Secção Aberta${openSectionCount > 1 ? "s" : ""}.`}
+                      : `${openSectionCount} Secç${openSectionCount > 1 ? "ões" : "ão"} Aberta${openSectionCount > 1 ? "s" : ""}.`}
                   </p>
                 ) : null}
               </div>
