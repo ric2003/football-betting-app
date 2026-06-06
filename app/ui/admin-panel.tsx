@@ -217,7 +217,7 @@ export function AdminPanel() {
   const [playerMessage, setPlayerMessage] = useState("");
   const [matchMessage, setMatchMessage] = useState("");
   const [specialMessage, setSpecialMessage] = useState("");
-  const [activeCatalogTab, setActiveCatalogTab] = useState<AdminCatalogTab>("teams");
+  const [activeCatalogTab, setActiveCatalogTab] = useState<AdminCatalogTab>("games");
   const [openMatchSections, setOpenMatchSections] = useState<Set<string>>(() => new Set());
   const [pending, setPending] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -440,6 +440,13 @@ export function AdminPanel() {
 
           <div className="mt-5 grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-2 sm:grid-cols-3">
             <CatalogTabButton
+              active={activeCatalogTab === "games"}
+              icon={<ListChecks size={17} />}
+              label="Jogos"
+              meta={`${matches.length} jogos`}
+              onClick={() => setActiveCatalogTab("games")}
+            />
+            <CatalogTabButton
               active={activeCatalogTab === "teams"}
               icon={<Users size={17} />}
               label="Equipas"
@@ -452,13 +459,6 @@ export function AdminPanel() {
               label="Jogadores"
               meta={`${players.length} jogadores`}
               onClick={() => setActiveCatalogTab("players")}
-            />
-            <CatalogTabButton
-              active={activeCatalogTab === "games"}
-              icon={<ListChecks size={17} />}
-              label="Jogos"
-              meta={`${matches.length} jogos`}
-              onClick={() => setActiveCatalogTab("games")}
             />
           </div>
 
