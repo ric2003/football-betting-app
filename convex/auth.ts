@@ -47,6 +47,21 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         return;
       }
 
+      const user = await ctx.db.get(userId);
+      const username = user?.username;
+      if (username) {
+        const usersWithUsername = await ctx.db
+          .query("users")
+          .filter((q) => q.eq(q.field("username"), username))
+          .take(2);
+        const usernameOwner = usersWithUsername.find(
+          (user) => user._id !== userId,
+        );
+        if (usernameOwner) {
+          throw new ConvexError("Username ja existe.");
+        }
+      }
+
       const users = await ctx.db.query("users").take(2);
       if (users.length === 1) {
         await ctx.db.patch(userId, { isAdmin: true });

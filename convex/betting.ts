@@ -622,6 +622,126 @@ export const updatePlayer = mutation({
   },
 });
 
+export const importSquadCatalog = mutation({
+  args: {
+    teams: v.array(
+      v.object({
+        name: v.string(),
+        code: v.string(),
+        group: v.optional(v.union(groupValidator, v.null())),
+      }),
+    ),
+    players: v.array(
+      v.object({
+        name: v.string(),
+        teamCode: v.string(),
+        isYoung: v.boolean(),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const existingTeams = await ctx.db.query("teams").collect();
+    const teamsByCode = new Map(
+      existingTeams
+        .filter((team) => team.code)
+        .map((team) => [team.code!.toUpperCase(), team]),
+    );
+    const teamsByName = new Map(existingTeams.map((team) => [team.name, team]));
+    const teamIdsByCode = new Map<string, Id<"teams">>();
+    let teamsInserted = 0;
+    let teamsUpdated = 0;
+
+    for (const teamPayload of args.teams) {
+      const name = cleanText(teamPayload.name);
+      const code = cleanText(teamPayload.code).toUpperCase();
+      if (name.length < 2) throw new Error("O nome da equipa e obrigatorio.");
+      if (code.length < 2) throw new Error(`Codigo invalido para ${name}.`);
+
+      const existing = teamsByCode.get(code) ?? teamsByName.get(name);
+      const patch = {
+        name,
+        code,
+        ...(teamPayload.group ? { group: teamPayload.group } : {}),
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, patch);
+        teamIdsByCode.set(code, existing._id);
+        teamsUpdated += 1;
+      } else {
+        const teamId = await ctx.db.insert("teams", {
+          name,
+          code,
+          group: teamPayload.group || undefined,
+        });
+        teamIdsByCode.set(code, teamId);
+        teamsInserted += 1;
+      }
+    }
+
+    const teamsAfterImport = await ctx.db.query("teams").collect();
+    for (const team of teamsAfterImport) {
+      if (team.code) teamIdsByCode.set(team.code.toUpperCase(), team._id);
+    }
+
+    const existingPlayers = await ctx.db.query("players").collect();
+    const playersByTeamAndName = new Map<string, Doc<"players">>();
+    for (const player of existingPlayers) {
+      const playerKey = `${player.teamId}:${player.name}:${player.isYoung ?? false}`;
+      if (playersByTeamAndName.has(playerKey)) {
+        await ctx.db.delete(player._id);
+      } else {
+        playersByTeamAndName.set(playerKey, player);
+      }
+    }
+    let playersInserted = 0;
+    let playersUpdated = 0;
+
+    for (const playerPayload of args.players) {
+      const name = cleanText(playerPayload.name);
+      const teamCode = cleanText(playerPayload.teamCode).toUpperCase();
+      const teamId = teamIdsByCode.get(teamCode);
+      if (!teamId) throw new Error(`Equipa nao encontrada para o codigo ${teamCode}.`);
+      if (name.length < 1) throw new Error(`Jogador sem nome em ${teamCode}.`);
+
+      const playerKey = `${teamId}:${name}:${playerPayload.isYoung}`;
+      const existing = playersByTeamAndName.get(playerKey);
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          name,
+          teamId,
+          isYoung: playerPayload.isYoung,
+        });
+        playersByTeamAndName.set(playerKey, existing);
+        playersUpdated += 1;
+      } else {
+        const playerId = await ctx.db.insert("players", {
+          name,
+          teamId,
+          isYoung: playerPayload.isYoung,
+        });
+        playersByTeamAndName.set(playerKey, {
+          _id: playerId,
+          _creationTime: Date.now(),
+          name,
+          teamId,
+          isYoung: playerPayload.isYoung,
+        });
+        playersInserted += 1;
+      }
+    }
+
+    return {
+      teamsInserted,
+      teamsUpdated,
+      playersInserted,
+      playersUpdated,
+    };
+  },
+});
+
 export const createMatch = mutation({
   args: {
     homeTeamId: v.id("teams"),

@@ -1,10 +1,8 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useQuery } from "convex/react";
 import { Eye, EyeOff, Loader2, LogIn, UserPlus } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
-import { api } from "@/convex/_generated/api";
+import { FormEvent, useState } from "react";
 
 type Mode = "signIn" | "signUp";
 
@@ -15,19 +13,10 @@ export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const usernameAvailable = useQuery(
-    api.betting.usernameAvailable,
-    mode === "signUp" && username.trim().length >= 3
-      ? { username: username.trim() }
-      : "skip",
-  );
-
-  const usernameMessage = useMemo(() => {
-    if (mode !== "signUp" || username.trim().length === 0) return "";
-    if (username.trim().length < 3) return "Usa pelo menos 3 caracteres.";
-    if (usernameAvailable === undefined) return "A verificar username...";
-    return usernameAvailable ? "Username disponivel." : "Username ja existe.";
-  }, [mode, username, usernameAvailable]);
+  const usernameMessage =
+    mode === "signUp" && username.trim().length > 0 && username.trim().length < 3
+      ? "Usa pelo menos 3 caracteres."
+      : "";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,8 +27,12 @@ export function SignInForm() {
       const formData = new FormData(event.currentTarget);
       formData.set("flow", mode);
 
-      if (mode === "signUp" && usernameAvailable === false) {
-        throw new Error("Escolhe outro username.");
+      if (mode === "signUp") {
+        const trimmedUsername = username.trim();
+        if (trimmedUsername.length < 3) {
+          throw new Error("O username deve ter pelo menos 3 caracteres.");
+        }
+        formData.set("username", trimmedUsername);
       }
 
       await signIn("password", formData);
@@ -57,16 +50,16 @@ export function SignInForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-lg border border-[#d7ded3] bg-white p-6 shadow-sm"
+      className="rounded-lg border border-[#d7ded3] bg-white p-6 shadow-sm transition-colors dark:border-border dark:bg-card"
     >
-      <div className="mb-6 flex rounded-md border border-[#dfe5dc] bg-[#f6f7f2] p-1">
+      <div className="mb-6 flex rounded-md border border-[#dfe5dc] bg-[#f6f7f2] p-1 transition-colors dark:border-border dark:bg-secondary">
         <button
           type="button"
           onClick={() => setMode("signIn")}
           className={`flex h-10 flex-1 items-center justify-center gap-2 rounded px-3 text-sm font-semibold transition ${
             mode === "signIn"
               ? "bg-[#16735f] text-white"
-              : "text-[#52605a] hover:text-[#18201b]"
+              : "text-[#52605a] hover:text-[#18201b] dark:text-muted-foreground dark:hover:text-foreground"
           }`}
         >
           <LogIn size={16} />
@@ -78,7 +71,7 @@ export function SignInForm() {
           className={`flex h-10 flex-1 items-center justify-center gap-2 rounded px-3 text-sm font-semibold transition ${
             mode === "signUp"
               ? "bg-[#16735f] text-white"
-              : "text-[#52605a] hover:text-[#18201b]"
+              : "text-[#52605a] hover:text-[#18201b] dark:text-muted-foreground dark:hover:text-foreground"
           }`}
         >
           <UserPlus size={16} />
@@ -89,22 +82,18 @@ export function SignInForm() {
       <div className="space-y-4">
         {mode === "signUp" ? (
           <label className="block">
-            <span className="text-sm font-medium text-[#26332d]">Username</span>
+            <span className="text-sm font-medium text-[#26332d] dark:text-foreground">Username</span>
             <input
               name="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              className="mt-2 h-11 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4"
+              className="mt-2 h-11 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30"
               placeholder="ricardo2026"
               autoComplete="username"
               required
             />
             {usernameMessage ? (
-              <span
-                className={`mt-2 block text-xs ${
-                  usernameAvailable === false ? "text-[#b43b2f]" : "text-[#52605a]"
-                }`}
-              >
+              <span className="mt-2 block text-xs text-[#52605a] dark:text-muted-foreground">
                 {usernameMessage}
               </span>
             ) : null}
@@ -112,11 +101,11 @@ export function SignInForm() {
         ) : null}
 
         <label className="block">
-          <span className="text-sm font-medium text-[#26332d]">Email</span>
+          <span className="text-sm font-medium text-[#26332d] dark:text-foreground">Email</span>
           <input
             name="email"
             type="email"
-            className="mt-2 h-11 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4"
+            className="mt-2 h-11 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30"
             placeholder="tu@email.com"
             autoComplete="email"
             required
@@ -124,8 +113,8 @@ export function SignInForm() {
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-[#26332d]">Password</span>
-          <span className="mt-2 flex h-11 items-center rounded-md border border-[#d7ded3] bg-white pr-2 ring-[#16735f]/20 transition focus-within:border-[#16735f] focus-within:ring-4">
+          <span className="text-sm font-medium text-[#26332d] dark:text-foreground">Password</span>
+          <span className="mt-2 flex h-11 items-center rounded-md border border-[#d7ded3] bg-white pr-2 ring-[#16735f]/20 transition focus-within:border-[#16735f] focus-within:ring-4 dark:border-border dark:bg-input/30">
             <input
               name="password"
               type={showPassword ? "text" : "password"}
@@ -137,7 +126,7 @@ export function SignInForm() {
             <button
               type="button"
               onClick={() => setShowPassword((value) => !value)}
-              className="flex h-8 w-8 items-center justify-center rounded text-[#52605a] hover:bg-[#eef2eb]"
+              className="flex h-8 w-8 items-center justify-center rounded text-[#52605a] hover:bg-[#eef2eb] dark:text-muted-foreground dark:hover:bg-accent"
               aria-label={showPassword ? "Esconder password" : "Mostrar password"}
             >
               {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -154,7 +143,7 @@ export function SignInForm() {
 
       <button
         type="submit"
-        disabled={pending || (mode === "signUp" && usernameAvailable === false)}
+        disabled={pending}
         className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#16735f] px-4 text-sm font-semibold text-white transition hover:bg-[#0f5d4d] disabled:opacity-60"
       >
         {pending ? <Loader2 className="animate-spin" size={17} /> : null}
