@@ -21,11 +21,20 @@ export const metadata: Metadata = {
 
 const themeScript = `
 try {
-  const theme = localStorage.getItem("theme");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  if (theme === "dark" || (!theme && prefersDark)) {
-    document.documentElement.classList.add("dark");
-  }
+  const mobileQuery = window.matchMedia("(max-width: 639px)");
+  const systemQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  const applyTheme = () => {
+    const theme = localStorage.getItem("theme");
+    const useSystemTheme = mobileQuery.matches || !theme;
+    document.documentElement.classList.toggle(
+      "dark",
+      useSystemTheme ? systemQuery.matches : theme === "dark"
+    );
+  };
+
+  applyTheme();
+  mobileQuery.addEventListener("change", applyTheme);
+  systemQuery.addEventListener("change", applyTheme);
 } catch {}
 `;
 
