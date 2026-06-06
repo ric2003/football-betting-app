@@ -15,10 +15,10 @@ export default function SignInPage() {
         <div className="grid w-full gap-8 lg:grid-cols-[1fr_420px] lg:items-center">
           <div className="max-w-2xl">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#16735f] dark:text-primary">
-              Mundial Bet 2026
+              World Cup Bets 2026
             </p>
             <h1 className="text-4xl font-semibold leading-tight text-[#13251f] dark:text-foreground sm:text-6xl">
-              Apostas do Mundial com a tua liga de amigos.
+              Apostas do Mundial com os teus amigos.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-[#52605a] dark:text-muted-foreground">
               Faz previsoes jogo a jogo, acompanha os pontos em direto e decide
