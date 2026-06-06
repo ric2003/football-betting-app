@@ -40,7 +40,7 @@ export function SignInForm() {
       setError(
         caught instanceof Error
           ? caught.message
-          : "Nao foi possivel autenticar. Tenta novamente.",
+          : "Não foi possivel autenticar. Tenta novamente.",
       );
     } finally {
       setPending(false);
@@ -88,7 +88,7 @@ export function SignInForm() {
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               className="mt-2 h-11 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30"
-              placeholder="ricardo2026"
+              placeholder="Ricardo Piedade"
               autoComplete="username"
               required
             />
@@ -106,7 +106,7 @@ export function SignInForm() {
             name="email"
             type="email"
             className="mt-2 h-11 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30"
-            placeholder="tu@email.com"
+            placeholder="exemplo@email.com"
             autoComplete="email"
             required
           />
@@ -119,7 +119,7 @@ export function SignInForm() {
               name="password"
               type={showPassword ? "text" : "password"}
               className="h-full min-w-0 flex-1 rounded-md bg-transparent px-3 outline-none"
-              placeholder="minimo 8 caracteres"
+              placeholder="Mínimo 8 caracteres"
               autoComplete={mode === "signUp" ? "new-password" : "current-password"}
               required
             />

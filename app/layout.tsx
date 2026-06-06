@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mundial Bet 2026",
+  title: "World Cup Bets 2026",
   description: "Apostas entre amigos para o Mundial de Futebol 2026.",
 };
 
