@@ -298,7 +298,7 @@ export function Dashboard() {
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2]">
-        <Loader2 className="animate-spin text-[#1f5cff]" size={28} />
+        <Loader2 className="animate-spin text-[#16735f]" size={28} />
       </main>
     );
   }
@@ -336,8 +336,8 @@ export function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#f4f7fb] pb-28 text-[#121826] [background-image:linear-gradient(90deg,rgba(31,92,255,.045)_1px,transparent_1px),linear-gradient(rgba(16,22,47,.035)_1px,transparent_1px)] [background-size:44px_44px] sm:pb-8">
-      <header className="border-b border-[#1f5cff]/40 bg-[#10162f] text-white shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-[#e11d48] via-[#f5c542] via-[#00a86b] to-[#1f5cff]" />
+      <header className="border-b border-[#16735f]/40 bg-[#16735F] text-white shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-[#e11d48] via-[#f5c542] via-[#00a86b] to-[#16735f]" />
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-md border border-white/15 bg-white/10 text-[#f5c542]">
@@ -362,7 +362,7 @@ export function Dashboard() {
             ) : null}
             <button
               onClick={() => void signOut()}
-              className="flex h-10 items-center gap-2 rounded-md bg-[#f5c542] px-3 text-sm font-bold text-[#10162f] hover:bg-[#e8b92f]"
+              className="flex h-10 items-center gap-2 rounded-md bg-[#f5c542] px-3 text-sm font-bold text-[#16735F] hover:bg-[#e8b92f]"
             >
               <LogOut size={16} />
               Sair
@@ -385,10 +385,10 @@ export function Dashboard() {
         <div className="mt-6">
           {activeView === "games" ? (
             <section className="overflow-hidden rounded-lg border border-[#dbe4f0] bg-white shadow-sm">
-              <div className="relative border-b border-[#dbe4f0] bg-[#10162f] px-5 py-6 text-white">
+              <div className="relative border-b border-[#dbe4f0] bg-[#16735f] px-5 py-6 text-white">
                 <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(rgba(255,255,255,.14)_1px,transparent_1px)] [background-size:36px_36px]" />
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-[#1f5cff]" />
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-[#16735f]" />
                 <div className="relative flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#f5c542]">
@@ -400,9 +400,7 @@ export function Dashboard() {
                       Ajusta o resultado nos cards e guarda quando tiveres a certeza.
                     </p>
                   </div>
-                  <div className="rounded-md border border-[#f5c542]/40 bg-[#f5c542] px-3 py-2 text-sm font-bold text-[#10162f] shadow-sm">
-                    Exato 5 pts · Vencedor 3 pts
-                  </div>
+                
                 </div>
               </div>
 
@@ -481,7 +479,7 @@ export function Dashboard() {
               <p
                 className={`mt-4 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold ${
                   specialBetsAreOpen
-                    ? "bg-[#eef4ff] text-[#1f5cff]"
+                    ? "bg-[#eef4ff] text-[#16735f]"
                     : "bg-[#f4f7fb] text-[#5c667a]"
                 }`}
               >
@@ -522,7 +520,7 @@ export function Dashboard() {
                     min={0}
                     defaultValue={data.specialBet?.[name] ?? 0}
                     disabled={!specialBetsAreOpen}
-                    className="mt-2 h-10 w-full rounded-md border border-[#dbe4f0] px-3 outline-none ring-[#1f5cff]/20 focus:border-[#1f5cff] focus:ring-4"
+                    className="mt-2 h-10 w-full rounded-md border border-[#dbe4f0] px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
                     required
                   />
                 </label>
@@ -533,7 +531,7 @@ export function Dashboard() {
               <button
                 type="submit"
                 disabled={savingSpecial || !canUseSpecials}
-                className="flex h-10 items-center gap-2 rounded-md bg-[#1f5cff] px-4 text-sm font-semibold text-white hover:bg-[#194bd1] disabled:opacity-60"
+                className="flex h-10 items-center gap-2 rounded-md bg-[#16735f] px-4 text-sm font-semibold text-white hover:bg-[#194bd1] disabled:opacity-60"
               >
                 {savingSpecial ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 Guardar especiais
@@ -591,7 +589,7 @@ function DashboardDock({
       description: "Grupos, fases e palpites",
       icon: ListChecks,
       active: activeView === "games",
-      accent: "#1f5cff",
+      accent: "#EE4B2B",
       onClick: () => onViewChange("games"),
     },
     {
@@ -623,8 +621,8 @@ function DashboardDock({
       aria-label="Navegacao principal"
       className={
         compact
-          ? "w-full max-w-sm rounded-2xl border border-[#dbe4f0] bg-white/90 p-1.5 shadow-xl shadow-[#10162f]/15 backdrop-blur"
-          : "rounded-2xl border border-[#dbe4f0] bg-white/85 p-2 shadow-lg shadow-[#10162f]/10 backdrop-blur"
+          ? "w-full max-w-sm rounded-2xl border border-[#dbe4f0] bg-white/90 p-1.5 shadow-xl shadow-[#16735F]/15 backdrop-blur"
+          : "rounded-2xl border border-[#dbe4f0] bg-white/85 p-2 shadow-lg shadow-[#16735F]/10 backdrop-blur"
       }
     >
       <div className={compact ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-3 gap-2"}>
@@ -680,7 +678,7 @@ function DockNavButton({
       style={{ "--dock-accent": accent } as React.CSSProperties}
       className={`relative overflow-hidden rounded-xl transition ${
         active
-          ? "bg-[#10162f] text-white shadow-md"
+          ? "bg-[#16735F] text-white shadow-md"
           : "bg-[#f7f9fd] text-[#5c667a] hover:bg-white hover:text-[#121826]"
       } ${compact ? "flex min-h-16 flex-col items-center justify-center px-2 py-2 text-center" : "flex min-h-20 items-center gap-3 px-4 py-3 text-left"}`}
     >
@@ -757,16 +755,16 @@ function MatchSectionPanel({
         className="group relative grid w-full gap-4 overflow-hidden px-4 py-4 text-left transition hover:bg-[#fbfcf8] lg:grid-cols-[1fr_320px]"
         aria-expanded={isOpen}
       >
-        <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-[#1f5cff]" />
+        <span className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-[#16735f]" />
         <span className="flex min-w-0 items-center gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-[#dbe4f0] bg-[#eef4ff] text-[#1f5cff] shadow-sm">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-[#dbe4f0] bg-[#eef4ff] text-[#16735f] shadow-sm">
             <ChevronDown
               size={19}
               className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
             />
           </span>
           <span className="min-w-0">
-            <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[#1f5cff]">
+            <span className="block text-xs font-bold uppercase tracking-[0.18em] text-[#16735f]">
               {typeLabel}
             </span>
             <span className="mt-1 block text-2xl font-black text-[#121826]">{section.title}</span>
@@ -780,7 +778,7 @@ function MatchSectionPanel({
         <span className="grid content-center gap-3">
           <span className="flex flex-wrap items-center gap-2 text-xs font-bold lg:justify-end">
             {openMatches > 0 ? (
-              <span className="rounded-md border border-[#cfe0ff] bg-[#eef4ff] px-2.5 py-1.5 text-[#1f5cff]">
+              <span className="rounded-md border border-[#cfe0ff] bg-[#eef4ff] px-2.5 py-1.5 text-[#16735f]">
                 {openMatches} aberto{openMatches > 1 ? "s" : ""}
               </span>
             ) : null}
@@ -800,7 +798,7 @@ function MatchSectionPanel({
             </span>
             <span className="h-2 overflow-hidden rounded-full bg-[#e5ebf5]">
               <span
-                className="block h-full rounded-full bg-[#1f5cff] transition-all"
+                className="block h-full rounded-full bg-[#16735f] transition-all"
                 style={{ width: `${predictionProgress}%` }}
               />
             </span>
@@ -915,7 +913,7 @@ function OptionSelect({
         name={name}
         defaultValue={defaultValue}
         disabled={disabled}
-        className="mt-2 h-10 w-full rounded-md border border-[#dbe4f0] bg-white px-3 outline-none ring-[#1f5cff]/20 focus:border-[#1f5cff] focus:ring-4"
+        className="mt-2 h-10 w-full rounded-md border border-[#dbe4f0] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
         required
       >
         <option value="" disabled>
@@ -954,7 +952,7 @@ function MatchBetForm({
   const isFinished = match.displayStatus === "finished";
   let feedback = hasBet ? "Palpite guardado" : "Escolhe o resultado";
   if (isFinished) {
-    feedback = `+${match.bet?.points ?? 0} pts`;
+    feedback = `${ (match.bet?.points ? '+' : '' ) + (match.bet?.points ?? 0)} pts`;
   } else if (!isBettingOpen) {
     feedback = hasBet ? `Palpite: ${savedHomeScore} - ${savedAwayScore}` : "Sem palpite";
   } else if (saveState === "saving") {
@@ -1034,7 +1032,7 @@ function MatchBetForm({
           </div>
           {isFinished ? (
             <div className="mt-2 flex justify-center">
-              <span className="rounded-md bg-[#f5c542] px-3 py-1 text-sm font-black text-[#10162f]">
+              <span className="rounded-md bg-[#f5c542] px-3 py-1 text-sm font-black text-[#16735F]">
                 {feedback}
               </span>
             </div>
@@ -1058,7 +1056,7 @@ function MatchBetForm({
               type="button"
               onClick={() => void savePrediction()}
               disabled={!hasUnsavedChanges || saveState === "saving"}
-              className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#f5c542] px-3 text-sm font-bold text-[#10162f] hover:bg-[#e8b92f] disabled:bg-[#d8dee9] disabled:text-[#6b7280]"
+              className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#f5c542] px-3 text-sm font-bold text-[#16735F] hover:bg-[#e8b92f] disabled:bg-[#d8dee9] disabled:text-[#6b7280]"
             >
               {saveState === "saving" ? (
                 <Loader2 className="animate-spin" size={15} />
@@ -1072,16 +1070,11 @@ function MatchBetForm({
 
         <div className="flex flex-wrap items-center gap-2 border-t border-[#e4ebf5] pt-3 text-xs font-semibold text-[#5c667a] lg:col-span-3">
           <MatchStatePill status={match.displayStatus} kickoffAt={match.kickoffAt} />
-          {!isBettingOpen && !isFinished && !hasBet ? (
-            <span className="flex items-center gap-1 rounded bg-[#fff3d7] px-2 py-1 text-[#9a6a18]">
-              <Lock size={13} />
-              Sem voto
-            </span>
-          ) : null}
+          
           <button
             type="button"
             onClick={onToggle}
-            className="ml-auto rounded px-2 py-1 text-[#1f5cff] hover:bg-[#eef4ff] md:hidden"
+            className="ml-auto rounded px-2 py-1 text-[#16735f] hover:bg-[#eef4ff] md:hidden"
             aria-expanded={isMobileOpen}
           >
             {isMobileOpen ? "Menos info" : "Mais info"}
@@ -1180,14 +1173,14 @@ function ScoreStepperSide({
         type="button"
         onClick={() => onChange(value - 1)}
         disabled={disabled || value <= 0}
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dbe4f0] bg-white text-[#1f5cff] hover:bg-[#eef4ff] disabled:bg-[#eef2f7] disabled:text-[#a1a9b8]"
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dbe4f0] bg-white text-[#16735f] hover:bg-[#eef4ff] disabled:bg-[#eef2f7] disabled:text-[#a1a9b8]"
         aria-label={`Diminuir golos de ${label}`}
       >
         <Minus size={15} />
       </button>
       <output
         aria-label={`Golos de ${label}`}
-        className="flex h-10 min-w-11 items-center justify-center rounded-md bg-[#10162f] px-3 text-xl font-black text-white shadow-inner"
+        className="flex h-10 min-w-11 items-center justify-center rounded-md bg-[#16735F] px-3 text-xl font-black text-white shadow-inner"
       >
         {value}
       </output>
@@ -1195,7 +1188,7 @@ function ScoreStepperSide({
         type="button"
         onClick={() => onChange(value + 1)}
         disabled={disabled}
-        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dbe4f0] bg-white text-[#1f5cff] hover:bg-[#eef4ff] disabled:bg-[#eef2f7] disabled:text-[#a1a9b8]"
+        className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dbe4f0] bg-white text-[#16735f] hover:bg-[#eef4ff] disabled:bg-[#eef2f7] disabled:text-[#a1a9b8]"
         aria-label={`Aumentar golos de ${label}`}
       >
         <Plus size={15} />
@@ -1213,11 +1206,11 @@ function ResultScore({
 }) {
   return (
     <div className="flex items-center justify-center gap-3">
-      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#10162f] px-3 text-2xl font-black text-white">
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#16735F] px-3 text-2xl font-black text-white">
         {homeScore ?? "-"}
       </span>
       <span className="text-lg font-black text-[#5c667a]">-</span>
-      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#10162f] px-3 text-2xl font-black text-white">
+      <span className="flex h-11 min-w-12 items-center justify-center rounded-md bg-[#16735F] px-3 text-2xl font-black text-white">
         {awayScore ?? "-"}
       </span>
     </div>
