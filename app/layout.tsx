@@ -19,6 +19,16 @@ export const metadata: Metadata = {
   description: "Apostas entre amigos para o Mundial de Futebol 2026.",
 };
 
+const themeScript = `
+try {
+  const theme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  if (theme === "dark" || (!theme && prefersDark)) {
+    document.documentElement.classList.add("dark");
+  }
+} catch {}
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,9 +37,11 @@ export default function RootLayout({
   return (
     <html
       lang="pt"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>

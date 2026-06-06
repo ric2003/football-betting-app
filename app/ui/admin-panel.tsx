@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { displayStatusForPortugalTime, type DisplayMatchStatus } from "./match-status";
@@ -107,6 +107,11 @@ type MatchSection = {
   title: string;
   order: number;
   matches: MatchRow[];
+};
+
+type CatalogOption = {
+  id: string;
+  label: string;
 };
 
 function toOptionalGroup(value: FormDataEntryValue | null) {
@@ -221,6 +226,50 @@ export function AdminPanel() {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const teams = useMemo(() => (data ? (data.teams as TeamRow[]) : []), [data]);
+  const players = useMemo(() => (data ? (data.players as PlayerRow[]) : []), [data]);
+  const matches = useMemo(
+    () =>
+      data
+        ? (data.matches as MatchRow[]).map((match) => ({
+            ...match,
+            displayStatus: displayStatusForPortugalTime(match, now),
+          }))
+        : [],
+    [data, now],
+  );
+  const youngPlayers = useMemo(
+    () => players.filter((player) => player.isYoung),
+    [players],
+  );
+  const teamOptions = useMemo(
+    () =>
+      teams.map((team) => ({
+        id: team._id,
+        label: team.code ? `${team.name} (${team.code})` : team.name,
+      })),
+    [teams],
+  );
+  const playerOptions = useMemo(
+    () =>
+      players.map((player) => ({
+        id: player._id,
+        label: `${player.name} - ${player.teamName}${player.isYoung ? " - jovem" : ""}`,
+      })),
+    [players],
+  );
+  const youngPlayerOptions = useMemo(
+    () =>
+      youngPlayers.map((player) => ({
+        id: player._id,
+        label: `${player.name} - ${player.teamName} - jovem`,
+      })),
+    [youngPlayers],
+  );
+  const canCreateDependentRows = teams.length > 0;
+  const canSetSpecials = teams.length > 0 && players.length > 0 && youngPlayers.length > 0;
+  const matchSections = groupMatchSections(matches);
 
   async function withPending(action: string, task: () => Promise<void>) {
     setPending(action);
@@ -342,17 +391,6 @@ export function AdminPanel() {
       </main>
     );
   }
-
-  const teams = data.teams as TeamRow[];
-  const players = data.players as PlayerRow[];
-  const matches = (data.matches as MatchRow[]).map((match) => ({
-    ...match,
-    displayStatus: displayStatusForPortugalTime(match, now),
-  }));
-  const canCreateDependentRows = teams.length > 0;
-  const youngPlayers = players.filter((player) => player.isYoung);
-  const canSetSpecials = teams.length > 0 && players.length > 0 && youngPlayers.length > 0;
-  const matchSections = groupMatchSections(matches);
 
   function toggleMatchSection(sectionKey: string) {
     setOpenMatchSections((current) => {
@@ -533,21 +571,21 @@ export function AdminPanel() {
           />
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {teamSpecialFields.map(([name, label]) => (
-              <TeamSelect
-                key={name}
+              <OptionAutocomplete
+                key={`${name}-${data.specialResult?.[name] ?? ""}`}
                 name={name}
                 label={label}
-                teams={teams}
+                options={teamOptions}
                 defaultValue={data.specialResult?.[name] ?? ""}
                 required
               />
             ))}
             {playerSpecialFields.map(([name, label]) => (
-              <PlayerSelect
-                key={name}
+              <OptionAutocomplete
+                key={`${name}-${data.specialResult?.[name] ?? ""}`}
                 name={name}
                 label={label}
-                players={name === "youngMvpPlayerId" ? youngPlayers : players}
+                options={name === "youngMvpPlayerId" ? youngPlayerOptions : playerOptions}
                 defaultValue={data.specialResult?.[name] ?? ""}
                 required
               />
@@ -990,6 +1028,150 @@ function CheckboxField({
   );
 }
 
+function OptionAutocomplete({
+  name,
+  label,
+  options,
+  defaultValue = "",
+  required,
+}: {
+  name: string;
+  label: string;
+  options: CatalogOption[];
+  defaultValue?: string;
+  required?: boolean;
+}) {
+  const inputId = useId();
+  const dropdownId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const defaultOption = options.find((option) => option.id === defaultValue);
+  const [inputValue, setInputValue] = useState(defaultOption?.label ?? "");
+  const [selectedId, setSelectedId] = useState(defaultOption?.id ?? "");
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const filteredOptions = useMemo(() => {
+    const query = inputValue.trim().toLocaleLowerCase("pt-PT");
+    if (!query) return options;
+    return options.filter((option) =>
+      option.label.toLocaleLowerCase("pt-PT").includes(query),
+    );
+  }, [inputValue, options]);
+
+  function setAutocompleteValidity(value: string, optionId: string) {
+    inputRef.current?.setCustomValidity(
+      value && !optionId ? "Escolhe uma opcao da lista." : "",
+    );
+  }
+
+  function selectOption(option: CatalogOption) {
+    setInputValue(option.label);
+    setSelectedId(option.id);
+    setIsOpen(false);
+    setAutocompleteValidity(option.label, option.id);
+  }
+
+  return (
+    <div className={`relative block ${isOpen ? "z-[100]" : ""}`}>
+      <label htmlFor={inputId} className="text-sm font-medium">
+        {label}
+      </label>
+      <input
+        id={inputId}
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        placeholder="Comeca a escrever..."
+        autoComplete="off"
+        role="combobox"
+        aria-controls={dropdownId}
+        aria-expanded={isOpen}
+        aria-autocomplete="list"
+        aria-activedescendant={
+          isOpen && filteredOptions[highlightedIndex]
+            ? `${dropdownId}-${filteredOptions[highlightedIndex].id}`
+            : undefined
+        }
+        onFocus={() => {
+          setHighlightedIndex(0);
+          setIsOpen(true);
+        }}
+        onChange={(event) => {
+          const value = event.currentTarget.value;
+          const option = options.find((item) => item.label === value);
+          const optionId = option?.id ?? "";
+          setInputValue(value);
+          setSelectedId(optionId);
+          setHighlightedIndex(0);
+          setIsOpen(true);
+          setAutocompleteValidity(value, optionId);
+        }}
+        onKeyDown={(event) => {
+          if (!isOpen && ["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) {
+            setIsOpen(true);
+          }
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setHighlightedIndex((current) =>
+              filteredOptions.length === 0 ? 0 : Math.min(current + 1, filteredOptions.length - 1),
+            );
+          } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setHighlightedIndex((current) => Math.max(current - 1, 0));
+          } else if (event.key === "Enter" && isOpen) {
+            const option = filteredOptions[highlightedIndex];
+            if (option) {
+              event.preventDefault();
+              selectOption(option);
+            }
+          } else if (event.key === "Escape") {
+            setIsOpen(false);
+          }
+        }}
+        onBlur={() => {
+          setAutocompleteValidity(inputValue, selectedId);
+          window.setTimeout(() => setIsOpen(false), 100);
+        }}
+        className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground"
+        required={required}
+      />
+      <input name={name} type="hidden" value={selectedId} readOnly />
+      {isOpen ? (
+        <div
+          id={dropdownId}
+          role="listbox"
+          className="absolute left-0 right-0 z-[100] mt-1 max-h-44 w-full overflow-y-auto rounded-md border border-[#d7ded3] bg-white py-1 text-sm text-[#18201b] shadow-xl dark:border-border dark:bg-popover dark:text-popover-foreground"
+        >
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option, index) => (
+              <button
+                key={option.id}
+                id={`${dropdownId}-${option.id}`}
+                type="button"
+                role="option"
+                aria-selected={selectedId === option.id}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                onClick={() => selectOption(option)}
+                className={`block w-full px-3 py-2 text-left focus:outline-none ${
+                  highlightedIndex === index || selectedId === option.id
+                    ? "bg-[#eef2eb] dark:bg-accent"
+                    : "hover:bg-[#eef2eb] dark:hover:bg-accent"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-[#52605a] dark:text-muted-foreground">
+              Sem resultados
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TeamSelect({
   name,
   label,
@@ -1022,41 +1204,6 @@ function TeamSelect({
         {teams.map((team) => (
           <option key={team._id} value={team._id}>
             {team.code ? `${team.name} (${team.code})` : team.name}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function PlayerSelect({
-  name,
-  label,
-  players,
-  defaultValue = "",
-  required,
-}: {
-  name: string;
-  label: string;
-  players: PlayerRow[];
-  defaultValue?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium">{label}</span>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        required={required}
-        className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
-      >
-        <option value="" disabled={required}>
-          Escolher jogador
-        </option>
-        {players.map((player) => (
-          <option key={player._id} value={player._id}>
-            {player.name} - {player.teamName}{player.isYoung ? " - jovem" : ""}
           </option>
         ))}
       </select>

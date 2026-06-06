@@ -65,6 +65,7 @@ export default defineSchema({
     group: v.optional(groupValidator),
   })
     .index("name", ["name"])
+    .index("code", ["code"])
     .index("group", ["group"]),
   players: defineTable({
     name: v.string(),
