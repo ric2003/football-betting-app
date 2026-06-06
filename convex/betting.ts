@@ -112,6 +112,14 @@ function scoreSpecialBet(
   return total;
 }
 
+function scoreSpecialField(
+  bet: Doc<"specialBets">,
+  result: Doc<"specialResults">,
+  key: keyof typeof specialPoints,
+) {
+  return bet[key] === result[key] ? specialPoints[key] : 0;
+}
+
 async function requireUser(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (!userId) throw new Error("Precisas de iniciar sessao.");
@@ -406,6 +414,133 @@ export const leaderboard = query({
           b.exactMatches - a.exactMatches ||
           a.username.localeCompare(b.username),
       );
+  },
+});
+
+export const playerProfile = query({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    await requireUser(ctx);
+
+    const normalizedUserId = ctx.db.normalizeId("users", userId);
+    if (!normalizedUserId) return null;
+
+    const profileUser = await ctx.db.get(normalizedUserId);
+    if (!profileUser || profileUser.isAnonymous) return null;
+
+    const [matches, bets, specialBet, specialResult, teamsRows, playersRows] =
+      await Promise.all([
+        ctx.db.query("matches").withIndex("kickoffAt").collect(),
+        ctx.db
+          .query("matchBets")
+          .withIndex("by_user", (q) => q.eq("userId", normalizedUserId))
+          .collect(),
+        ctx.db
+          .query("specialBets")
+          .withIndex("by_user", (q) => q.eq("userId", normalizedUserId))
+          .first(),
+        ctx.db.query("specialResults").first(),
+        ctx.db.query("teams").collect(),
+        ctx.db.query("players").collect(),
+      ]);
+
+    const teamsById = new Map(teamsRows.map((team) => [team._id, team]));
+    const playersById = new Map(playersRows.map((player) => [player._id, player]));
+    const betsByMatch = new Map(bets.map((bet) => [bet.matchId, bet]));
+    const now = Date.now();
+
+    const visibleMatches = await Promise.all(
+      matches
+        .filter((match) => match.status === "finished" || match.kickoffAt <= now)
+        .map(async (match) => {
+          const hydrated = await hydrateMatch(ctx, match);
+          const bet = betsByMatch.get(match._id);
+          const points = scoreMatchBet(match, bet);
+          return {
+            ...hydrated,
+            bet: bet
+              ? {
+                  homeScore: bet.homeScore,
+                  awayScore: bet.awayScore,
+                  points,
+                  exact: isExactMatchBet(match, bet),
+                }
+              : null,
+          };
+        }),
+    );
+
+    const matchPoints = visibleMatches.reduce(
+      (total, match) => total + (match.bet?.points ?? 0),
+      0,
+    );
+    const exactMatches = visibleMatches.filter((match) => match.bet?.exact).length;
+    const specialPointsTotal = scoreSpecialBet(specialBet, specialResult);
+
+    function teamLabel(teamId: Id<"teams">) {
+      const team = teamsById.get(teamId);
+      return team?.code ? `${team.name} (${team.code})` : team?.name ?? "Resposta removida";
+    }
+
+    function playerLabel(playerId: Id<"players">) {
+      const player = playersById.get(playerId);
+      const team = player ? teamsById.get(player.teamId) : null;
+      return player
+        ? team
+          ? `${player.name} - ${team.name}`
+          : player.name
+        : "Resposta removida";
+    }
+
+    const specialBreakdown =
+      specialBet && specialResult
+        ? (Object.keys(specialPoints) as Array<keyof typeof specialPoints>).map((key) => {
+            const betValue = specialBet[key];
+            const resultValue = specialResult[key];
+            const isTeam = key.endsWith("TeamId");
+            const isPlayer = key.endsWith("PlayerId");
+            const formatValue = (value: typeof betValue) => {
+              if (typeof value === "number") return String(value);
+              if (isTeam) return teamLabel(value as Id<"teams">);
+              if (isPlayer) return playerLabel(value as Id<"players">);
+              return String(value);
+            };
+
+            return {
+              key,
+              label: specialLabels[key],
+              bet: formatValue(betValue),
+              result: formatValue(resultValue),
+              points: scoreSpecialField(specialBet, specialResult, key),
+              maxPoints: specialPoints[key],
+              correct: betValue === resultValue,
+            };
+          })
+        : [];
+
+    return {
+      user: {
+        _id: profileUser._id,
+        username: profileUser.username ?? profileUser.name ?? profileUser.email ?? "Utilizador",
+      },
+      totals: {
+        matchPoints,
+        specialPoints: specialPointsTotal,
+        exactMatches,
+        totalPoints: matchPoints + specialPointsTotal,
+      },
+      matches: visibleMatches.sort(
+        (a, b) =>
+          b.kickoffAt - a.kickoffAt ||
+          a.homeTeam.localeCompare(b.homeTeam) ||
+          a.awayTeam.localeCompare(b.awayTeam),
+      ),
+      specialBreakdown,
+      specialsAreResolved: specialResult !== null,
+      hiddenMatchCount: matches.filter(
+        (match) => match.status !== "finished" && match.kickoffAt > now,
+      ).length,
+    };
   },
 });
 

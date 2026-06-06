@@ -19,7 +19,17 @@ import {
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
@@ -43,6 +53,11 @@ const numberSpecialFields = [
   ["redCards", "Número de Cartões Vermelhos"],
 ] as const;
 
+type TeamSpecialFieldName = (typeof teamSpecialFields)[number][0];
+type PlayerSpecialFieldName = (typeof playerSpecialFields)[number][0];
+type NumberSpecialFieldName = (typeof numberSpecialFields)[number][0];
+type SpecialFieldName = TeamSpecialFieldName | PlayerSpecialFieldName | NumberSpecialFieldName;
+
 const stageLabels = {
   group: "Fase de Grupos",
   roundOf32: "16 Avos de Final",
@@ -63,6 +78,7 @@ const knockoutStageOrder: Array<keyof typeof stageLabels> = [
 ];
 
 type DashboardView = "games" | "leaderboard" | "specials";
+const dashboardViews = ["games", "leaderboard", "specials"] as const;
 
 type MatchRow = {
   _id: Id<"matches">;
@@ -88,6 +104,65 @@ type MatchSection = {
 };
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+
+const gameRulesCollapsedKey = "mundial-bet-game-rules-collapsed";
+const activeDashboardViewKey = "mundial-bet-active-dashboard-view";
+
+function isDashboardView(value: string | null): value is DashboardView {
+  return dashboardViews.includes(value as DashboardView);
+}
+
+function getStoredDashboardView(): DashboardView {
+  const storedView = window.localStorage.getItem(activeDashboardViewKey);
+  return isDashboardView(storedView) ? storedView : "games";
+}
+
+function useActiveDashboardView(): {
+  activeView: DashboardView;
+  setActiveView: (nextView: DashboardView) => void;
+} {
+  const activeView = useSyncExternalStore<DashboardView>(
+    (onStoreChange) => {
+      window.addEventListener("storage", onStoreChange);
+      window.addEventListener("active-dashboard-view", onStoreChange);
+      return () => {
+        window.removeEventListener("storage", onStoreChange);
+        window.removeEventListener("active-dashboard-view", onStoreChange);
+      };
+    },
+    getStoredDashboardView,
+    () => "games",
+  );
+
+  function setActiveView(nextView: DashboardView) {
+    window.localStorage.setItem(activeDashboardViewKey, nextView);
+    window.dispatchEvent(new Event("active-dashboard-view"));
+  }
+
+  return { activeView, setActiveView };
+}
+
+function useCollapsedGameRules() {
+  const isCollapsed = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("storage", onStoreChange);
+      window.addEventListener("game-rules-collapsed", onStoreChange);
+      return () => {
+        window.removeEventListener("storage", onStoreChange);
+        window.removeEventListener("game-rules-collapsed", onStoreChange);
+      };
+    },
+    () => window.localStorage.getItem(gameRulesCollapsedKey) === "true",
+    () => false,
+  );
+
+  function setRulesCollapsed(nextValue: boolean) {
+    window.localStorage.setItem(gameRulesCollapsedKey, String(nextValue));
+    window.dispatchEvent(new Event("game-rules-collapsed"));
+  }
+
+  return { isCollapsed, setRulesCollapsed };
+}
 
 const flagCodeByTeamCode: Record<string, string> = {
   ALG: "dz",
@@ -217,12 +292,17 @@ export function Dashboard() {
   const data = useQuery(api.betting.dashboard);
   const leaderboard = useQuery(api.betting.leaderboard);
   const catalog = useQuery(api.betting.catalogOptions);
+  const specialConfig = useQuery(api.betting.specialConfig);
   const saveSpecialBet = useMutation(api.betting.saveSpecialBet);
-  const [activeView, setActiveView] = useState<DashboardView>("games");
+  const { activeView, setActiveView } = useActiveDashboardView();
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set());
   const [specialMessage, setSpecialMessage] = useState("");
   const [savingSpecial, setSavingSpecial] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const currentUserLeaderboardRowRef = useRef<HTMLAnchorElement>(null);
+  const [currentUserLeaderboardRowIsVisible, setCurrentUserLeaderboardRowIsVisible] =
+    useState(true);
+  const { isCollapsed: rulesAreCollapsed, setRulesCollapsed } = useCollapsedGameRules();
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -261,7 +341,8 @@ export function Dashboard() {
     user === undefined ||
     data === undefined ||
     leaderboard === undefined ||
-    catalog === undefined;
+    catalog === undefined ||
+    specialConfig === undefined;
   const matches = data
     ? (data.matches as MatchRow[]).map((match) => ({
         ...match,
@@ -276,6 +357,17 @@ export function Dashboard() {
       ? catalog.youngPlayers
       : catalog.players.filter((player) => player.isYoung);
   }, [catalog]);
+  const currentUserLeaderboardIndex =
+    user && leaderboard ? leaderboard.findIndex((row) => row.userId === user._id) : -1;
+  const currentUserLeaderboardRow =
+    currentUserLeaderboardIndex >= 0 ? leaderboard?.[currentUserLeaderboardIndex] : undefined;
+  const currentUserLeaderboardEntry = currentUserLeaderboardRow
+    ? {
+        row: currentUserLeaderboardRow,
+        rank: currentUserLeaderboardIndex + 1,
+      }
+    : null;
+  const currentUserLeaderboardUserId = currentUserLeaderboardEntry?.row.userId;
 
   useEffect(() => {
     if (!nextSectionKey) return;
@@ -288,6 +380,21 @@ export function Dashboard() {
     return () => window.clearTimeout(timer);
   }, [nextSectionKey]);
 
+  useEffect(() => {
+    if (activeView !== "leaderboard" || !currentUserLeaderboardUserId) return;
+
+    const row = currentUserLeaderboardRowRef.current;
+    if (!row) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setCurrentUserLeaderboardRowIsVisible(entry.isIntersecting),
+      { threshold: 0.6 },
+    );
+    observer.observe(row);
+
+    return () => observer.disconnect();
+  }, [activeView, currentUserLeaderboardUserId]);
+
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2] dark:bg-background">
@@ -295,6 +402,9 @@ export function Dashboard() {
       </main>
     );
   }
+  if (!data || !catalog || !leaderboard || !specialConfig) return null;
+  const dashboardData = data;
+  const loadedSpecialConfig = specialConfig;
 
   const firstKickoffAt =
     matches.length > 0
@@ -310,6 +420,45 @@ export function Dashboard() {
     youngPlayerOptions.length > 0 &&
     specialBetsAreOpen;
   const openSectionCount = openSections.size;
+  const teamLabelById = new Map(catalog.teams.map((option) => [String(option.id), option.label]));
+  const playerLabelById = new Map(catalog.players.map((option) => [String(option.id), option.label]));
+
+  function specialResultLabel(name: SpecialFieldName) {
+    const resultValue = dashboardData.specialResult?.[name];
+    if (resultValue === undefined) return "";
+    if (name === "ownGoals" || name === "redCards") return String(resultValue);
+    if (name.endsWith("TeamId")) return teamLabelById.get(String(resultValue)) ?? "Resposta removida";
+    return playerLabelById.get(String(resultValue)) ?? "Resposta removida";
+  }
+
+  function specialFieldFeedback(name: SpecialFieldName) {
+    if (!dashboardData.specialResult) return null;
+
+    const betValue = dashboardData.specialBet?.[name];
+    const resultValue = dashboardData.specialResult[name];
+    const officialAnswer = specialResultLabel(name);
+    const points = loadedSpecialConfig.points[name];
+
+    if (betValue === undefined) {
+      return (
+        <SpecialAnswerFeedback
+          tone="missed"
+          text={`Sem palpite. Resposta certa: ${officialAnswer}.`}
+        />
+      );
+    }
+
+    if (betValue === resultValue) {
+      return <SpecialAnswerFeedback tone="correct" text={`Certo. +${points} pts.`} />;
+    }
+
+    return (
+      <SpecialAnswerFeedback
+        tone="wrong"
+        text={`Errado. Resposta certa: ${officialAnswer}.`}
+      />
+    );
+  }
 
   function toggleSection(sectionKey: string) {
     setOpenSections((current) => {
@@ -320,6 +469,13 @@ export function Dashboard() {
         next.add(sectionKey);
       }
       return next;
+    });
+  }
+
+  function scrollToCurrentUserLeaderboardRow() {
+    currentUserLeaderboardRowRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
     });
   }
 
@@ -366,6 +522,11 @@ export function Dashboard() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <GameRulesPanel
+          isCollapsed={rulesAreCollapsed}
+          onCollapsedChange={setRulesCollapsed}
+        />
+
         <div className="hidden sm:block">
           <DashboardDock
             activeView={activeView}
@@ -437,9 +598,25 @@ export function Dashboard() {
               </div>
               <div className="mt-5 grid gap-3">
                 {leaderboard.map((row, index) => (
-                  <LeaderboardRow key={row.userId} row={row} rank={index + 1} />
+                  <LeaderboardRow
+                    key={row.userId}
+                    row={row}
+                    rank={index + 1}
+                    isCurrentUser={row.userId === user?._id}
+                    rowRef={row.userId === user?._id ? currentUserLeaderboardRowRef : undefined}
+                  />
                 ))}
               </div>
+              {currentUserLeaderboardEntry && !currentUserLeaderboardRowIsVisible ? (
+                <button
+                  type="button"
+                  onClick={scrollToCurrentUserLeaderboardRow}
+                  className="fixed bottom-24 right-4 z-50 flex h-11 items-center gap-2 rounded-md border border-[#b7d8cd] bg-white px-3 text-sm font-bold text-[#16735f] shadow-lg transition hover:bg-[#eaf4ef] dark:border-primary/35 dark:bg-card dark:text-primary dark:hover:bg-accent sm:bottom-6 sm:right-6"
+                >
+                  <Crown size={16} />
+                  A minha posicao
+                </button>
+              ) : null}
             </section>
           ) : null}
 
@@ -481,9 +658,11 @@ export function Dashboard() {
                   key={`${name}-${data.specialBet?.[name] ?? ""}`}
                   name={name}
                   label={label}
+                  points={specialConfig.points[name]}
                   options={catalog.teams}
                   defaultValue={data.specialBet?.[name] ?? ""}
                   disabled={!specialBetsAreOpen}
+                  feedback={specialFieldFeedback(name)}
                 />
               ))}
               {playerSpecialFields.map(([name, label]) => (
@@ -491,14 +670,16 @@ export function Dashboard() {
                   key={`${name}-${data.specialBet?.[name] ?? ""}`}
                   name={name}
                   label={label}
+                  points={specialConfig.points[name]}
                   options={name === "youngMvpPlayerId" ? youngPlayerOptions : catalog.players}
                   defaultValue={data.specialBet?.[name] ?? ""}
                   disabled={!specialBetsAreOpen}
+                  feedback={specialFieldFeedback(name)}
                 />
               ))}
               {numberSpecialFields.map(([name, label]) => (
                 <label key={name} className="block">
-                  <span className="text-sm font-medium">{label}</span>
+                  <FieldLabel label={label} points={specialConfig.points[name]} />
                   <input
                     name={name}
                     type="number"
@@ -508,6 +689,7 @@ export function Dashboard() {
                     className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30"
                     required
                   />
+                  {specialFieldFeedback(name)}
                 </label>
               ))}
             </div>
@@ -547,6 +729,68 @@ export function Dashboard() {
         />
       </div>
     </main>
+  );
+}
+
+function GameRulesPanel({
+  isCollapsed,
+  onCollapsedChange,
+}: {
+  isCollapsed: boolean;
+  onCollapsedChange: (isCollapsed: boolean) => void;
+}) {
+  const rules = [
+    "As Apostas contam apenas para os primeiros 90 minutos, sem prolongamento e penáltis.",
+    "Apostas Especiais devem ser feitas antes do primeiro jogo do Mundial.",
+    "Só podes apostar num jogo antes de ele começar.",
+    "Em caso de empate na classificação, ganha quem tiver mais Resultados Exatos.",
+  ];
+
+  return (
+    <section className="mb-4 overflow-hidden rounded-lg border border-[#d7ded3] bg-white shadow-sm transition-colors dark:border-border dark:bg-card">
+      <button
+        type="button"
+        onClick={() => onCollapsedChange(!isCollapsed)}
+        aria-expanded={!isCollapsed}
+        className="grid w-full gap-3 px-4 py-3 text-left transition hover:bg-[#fbfcfa] dark:hover:bg-accent sm:grid-cols-[1fr_auto] sm:items-center"
+      >
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-black uppercase tracking-[0.14em] text-[#16735f] dark:text-primary">
+              Regras do Jogo
+            </span>
+            <span className="rounded bg-[#eaf4ef] px-2 py-1 text-xs font-bold text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
+              3 pts Resultado Certo
+            </span>
+            <span className="rounded bg-[#fff3d7] px-2 py-1 text-xs font-bold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
+              5 pts Resultado Exato
+            </span>
+          </span>
+          <span className="mt-1 block text-sm text-[#52605a] dark:text-muted-foreground">
+            Apostas antes do apito inicial, Apostas Especiais antes do primeiro jogo,
+            desempate por Resultados Exatos.
+          </span>
+        </span>
+        <span className="flex items-center gap-2 text-sm font-semibold text-[#16735f] dark:text-primary">
+          {isCollapsed ? "Ver regras" : "Recolher"}
+          <ChevronDown
+            size={17}
+            className={`transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+          />
+        </span>
+      </button>
+
+      {!isCollapsed ? (
+        <div className="grid gap-2 border-t border-[#edf1ea] bg-[#fbfcfa] px-4 py-3 text-sm text-[#52605a] transition-colors dark:border-border dark:bg-background dark:text-muted-foreground md:grid-cols-2">
+          {rules.map((rule) => (
+            <div key={rule} className="flex gap-2">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#16735f]" />
+              <span>{rule}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -790,8 +1034,11 @@ function MatchSectionPanel({
 function LeaderboardRow({
   row,
   rank,
+  isCurrentUser = false,
+  rowRef,
 }: {
   row: {
+    userId: string;
     username: string;
     matchPoints: number;
     specialPoints: number;
@@ -799,6 +1046,8 @@ function LeaderboardRow({
     totalPoints: number;
   };
   rank: number;
+  isCurrentUser?: boolean;
+  rowRef?: Ref<HTMLAnchorElement>;
 }) {
   const podium =
     rank === 1
@@ -830,47 +1079,103 @@ function LeaderboardRow({
             };
 
   return (
-    <div
-      className={`grid gap-3 rounded-md border px-3 py-3 sm:grid-cols-[56px_1fr_auto] sm:items-center ${podium.row}`}
+    <Link
+      href={`/profile/${row.userId}`}
+      ref={rowRef}
+      className={`grid scroll-mt-24 gap-3 rounded-md border px-3 py-3 transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#16735f]/20 sm:grid-cols-[56px_1fr_auto] sm:items-center ${podium.row} ${
+        isCurrentUser
+          ? "scale-[1.015] border-[#16735f] px-4 py-4 shadow-md ring-2 ring-[#16735f]/20 dark:border-primary dark:ring-primary/20 sm:grid-cols-[64px_1fr_auto]"
+          : ""
+      }`}
     >
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-md text-base font-bold ${podium.badge}`}
+        className={`flex h-12 w-12 items-center justify-center rounded-md text-base font-bold ${
+          isCurrentUser ? "sm:h-14 sm:w-14 sm:text-lg" : ""
+        } ${podium.badge}`}
       >
         {rank}
       </div>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="truncate text-lg font-semibold">{row.username}</p>
+          <p className={`truncate font-semibold ${isCurrentUser ? "text-xl" : "text-lg"}`}>
+            {row.username}
+          </p>
           {podium.label ? (
             <span className="rounded px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#52605a] dark:bg-background/30 dark:text-current/70">
               {podium.label}
+            </span>
+          ) : null}
+          {isCurrentUser ? (
+            <span className="rounded bg-[#dff3ea] px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
+              Tu
             </span>
           ) : null}
         </div>
         <p className="text-sm text-[#52605a] dark:text-muted-foreground">
           Jogos {row.matchPoints} · Exatos {row.exactMatches} · Especiais {row.specialPoints}
         </p>
+        <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:text-primary">
+          Ver detalhes
+        </p>
       </div>
       <div className="flex items-center gap-2 justify-self-start rounded-md bg-white/70 px-3 py-2 font-semibold dark:bg-background/45 sm:justify-self-end">
         <Medal className={podium.icon} size={18} />
         {row.totalPoints} pts
       </div>
-    </div>
+    </Link>
+  );
+}
+
+function FieldLabel({ label, points }: { label: string; points?: number }) {
+  return (
+    <span className="flex items-center justify-between gap-2 text-sm font-medium">
+      <span>{label}</span>
+      {points !== undefined ? (
+        <span className="shrink-0 rounded-full bg-[#eaf4ef] px-2 py-0.5 text-xs font-bold text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
+          {points} pts
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function SpecialAnswerFeedback({
+  tone,
+  text,
+}: {
+  tone: "correct" | "wrong" | "missed";
+  text: string;
+}) {
+  const toneClass =
+    tone === "correct"
+      ? "bg-[#eaf4ef] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]"
+      : tone === "wrong"
+        ? "bg-[#fff1f1] text-[#9f2f2f] dark:bg-[#3b1515] dark:text-[#f2a8a8]"
+        : "bg-[#eef2eb] text-[#52605a] dark:bg-secondary dark:text-muted-foreground";
+
+  return (
+    <p className={`mt-2 rounded-md px-3 py-2 text-xs font-semibold ${toneClass}`}>
+      {text}
+    </p>
   );
 }
 
 function OptionAutocomplete({
   name,
   label,
+  points,
   options,
   defaultValue,
   disabled,
+  feedback,
 }: {
   name: string;
   label: string;
+  points?: number;
   options: { id: string; label: string }[];
   defaultValue: string;
   disabled?: boolean;
+  feedback?: ReactNode;
 }) {
   const inputId = useId();
   const dropdownId = useId();
@@ -903,8 +1208,8 @@ function OptionAutocomplete({
 
   return (
     <div className={`relative block ${isOpen ? "z-[100]" : ""}`}>
-      <label htmlFor={inputId} className="text-sm font-medium">
-        {label}
+      <label htmlFor={inputId}>
+        <FieldLabel label={label} points={points} />
       </label>
       <input
         id={inputId}
@@ -967,6 +1272,7 @@ function OptionAutocomplete({
         required
       />
       <input name={name} type="hidden" value={selectedId} disabled={disabled} readOnly />
+      {feedback}
       {isOpen && !disabled ? (
         <div
           id={dropdownId}

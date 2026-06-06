@@ -82,7 +82,9 @@ export function SignInForm() {
       <div className="space-y-4">
         {mode === "signUp" ? (
           <label className="block">
-            <span className="text-sm font-medium text-[#26332d] dark:text-foreground">Username</span>
+            <span className="text-sm font-medium text-[#26332d] dark:text-foreground">
+              Username
+            </span>
             <input
               name="username"
               value={username}
@@ -101,7 +103,9 @@ export function SignInForm() {
         ) : null}
 
         <label className="block">
-          <span className="text-sm font-medium text-[#26332d] dark:text-foreground">Email</span>
+          <span className="text-sm font-medium text-[#26332d] dark:text-foreground">
+            Email
+          </span>
           <input
             name="email"
             type="email"
@@ -113,7 +117,9 @@ export function SignInForm() {
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-[#26332d] dark:text-foreground">Password</span>
+          <span className="text-sm font-medium text-[#26332d] dark:text-foreground">
+            Password
+          </span>
           <span className="mt-2 flex h-11 items-center rounded-md border border-[#d7ded3] bg-white pr-2 ring-[#16735f]/20 transition focus-within:border-[#16735f] focus-within:ring-4 dark:border-border dark:bg-input/30">
             <input
               name="password"
@@ -136,7 +142,10 @@ export function SignInForm() {
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-md border border-[#f0c6bd] bg-[#fff4f1] px-3 py-2 text-sm text-[#9a2f25]">
+        <p
+          aria-live="polite"
+          className="mt-4 rounded-md border border-[#f0c6bd] bg-[#fff4f1] px-3 py-2 text-sm text-[#9a2f25]"
+        >
           {error}
         </p>
       ) : null}
