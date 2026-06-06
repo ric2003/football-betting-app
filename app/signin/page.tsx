@@ -7,7 +7,7 @@ export default function SignInPage() {
       <div className="mx-auto flex w-full max-w-5xl justify-end">
         <AnimatedThemeToggler
           aria-label="Alternar modo escuro"
-          className="flex h-10 w-10 items-center justify-center rounded-md border border-[#d7ded3] bg-white text-[#16735f] transition hover:bg-[#eef2eb] dark:border-border dark:bg-secondary dark:text-foreground dark:hover:bg-accent [&_svg]:h-4 [&_svg]:w-4"
+          className="hidden h-10 w-10 items-center justify-center rounded-md border border-[#d7ded3] bg-white text-[#16735f] transition hover:bg-[#eef2eb] dark:border-border dark:bg-secondary dark:text-foreground dark:hover:bg-accent sm:flex [&_svg]:h-4 [&_svg]:w-4"
           variant="circle"
         />
       </div>

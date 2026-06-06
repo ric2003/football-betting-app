@@ -480,7 +480,7 @@ export function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f2] pb-28 text-[#18201b] transition-colors dark:bg-background dark:text-foreground sm:pb-8">
+    <main className="min-h-screen bg-[#f6f7f2] pb-20 text-[#18201b] transition-colors dark:bg-background dark:text-foreground sm:pb-8">
       <header className="border-b border-[#dfe5dc] bg-white text-[#18201b] shadow-sm transition-colors dark:border-border dark:bg-card dark:text-card-foreground">
         <div className="h-1 bg-[#16735f]" />
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
@@ -498,7 +498,7 @@ export function Dashboard() {
           <div className="flex items-center gap-2">
             <AnimatedThemeToggler
               aria-label="Alternar modo escuro"
-              className="flex h-10 w-10 items-center justify-center rounded-md border border-[#d7ded3] bg-white text-[#16735f] transition hover:bg-[#eef2eb] dark:border-border dark:bg-secondary dark:text-foreground dark:hover:bg-accent [&_svg]:h-4 [&_svg]:w-4"
+              className="hidden h-10 w-10 items-center justify-center rounded-md border border-[#d7ded3] bg-white text-[#16735f] transition hover:bg-[#eef2eb] dark:border-border dark:bg-secondary dark:text-foreground dark:hover:bg-accent sm:flex [&_svg]:h-4 [&_svg]:w-4"
               variant="circle"
             />
             {user?.isAdmin ? (
@@ -512,10 +512,11 @@ export function Dashboard() {
             ) : null}
             <button
               onClick={() => void signOut()}
-              className="flex h-10 items-center gap-2 rounded-md bg-[#16735f] px-3 text-sm font-bold text-white hover:bg-[#0f5d4d]"
+              aria-label="Sair"
+              className="flex h-10 w-10 items-center justify-center gap-2 rounded-md bg-[#16735f] text-sm font-bold text-white hover:bg-[#0f5d4d] sm:w-auto sm:px-3"
             >
               <LogOut size={16} />
-              Sair
+              <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>
@@ -718,7 +719,7 @@ export function Dashboard() {
           ) : null}
         </div>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center border-t border-[#d7ded3] bg-[#f6f7f2]/85 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur transition-colors dark:border-border dark:bg-background/85 sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center border-t border-[#d7ded3] bg-[#f6f7f2]/90 px-2 pb-[calc(0.35rem+env(safe-area-inset-bottom))] pt-1.5 backdrop-blur transition-colors dark:border-border dark:bg-background/90 sm:hidden">
         <DashboardDock
           activeView={activeView}
           matchCount={matches.length}
@@ -752,39 +753,41 @@ function GameRulesPanel({
         type="button"
         onClick={() => onCollapsedChange(!isCollapsed)}
         aria-expanded={!isCollapsed}
-        className="grid w-full gap-3 px-4 py-3 text-left transition hover:bg-[#fbfcfa] dark:hover:bg-accent sm:grid-cols-[1fr_auto] sm:items-center"
+        className="grid w-full gap-2 px-3 py-2.5 text-left transition hover:bg-[#fbfcfa] dark:hover:bg-accent sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3 sm:px-4 sm:py-3"
       >
         <span className="min-w-0">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-black uppercase tracking-[0.14em] text-[#16735f] dark:text-primary">
+          <span className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-[#16735f] dark:text-primary sm:text-sm sm:tracking-[0.14em]">
               Regras do Jogo
             </span>
-            <span className="rounded bg-[#eaf4ef] px-2 py-1 text-xs font-bold text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
-              3 pts Resultado Certo
+            <span className="rounded bg-[#eaf4ef] px-1.5 py-0.5 text-[11px] font-bold text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3] sm:px-2 sm:py-1 sm:text-xs">
+              <span className="sm:hidden">3 pts certo</span>
+              <span className="hidden sm:inline">3 pts Resultado Certo</span>
             </span>
-            <span className="rounded bg-[#fff3d7] px-2 py-1 text-xs font-bold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
-              5 pts Resultado Exato
+            <span className="rounded bg-[#fff3d7] px-1.5 py-0.5 text-[11px] font-bold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542] sm:px-2 sm:py-1 sm:text-xs">
+              <span className="sm:hidden">5 pts exato</span>
+              <span className="hidden sm:inline">5 pts Resultado Exato</span>
             </span>
           </span>
-          <span className="mt-1 block text-sm text-[#52605a] dark:text-muted-foreground">
+          <span className="mt-1 block text-xs leading-snug text-[#52605a] dark:text-muted-foreground sm:text-sm">
             Apostas antes do apito inicial, Apostas Especiais antes do primeiro jogo,
             desempate por Resultados Exatos.
           </span>
         </span>
-        <span className="flex items-center gap-2 text-sm font-semibold text-[#16735f] dark:text-primary">
+        <span className="flex items-center justify-end gap-1.5 text-xs font-semibold text-[#16735f] dark:text-primary sm:gap-2 sm:text-sm">
           {isCollapsed ? "Ver regras" : "Recolher"}
           <ChevronDown
-            size={17}
+            size={16}
             className={`transition-transform ${isCollapsed ? "" : "rotate-180"}`}
           />
         </span>
       </button>
 
       {!isCollapsed ? (
-        <div className="grid gap-2 border-t border-[#edf1ea] bg-[#fbfcfa] px-4 py-3 text-sm text-[#52605a] transition-colors dark:border-border dark:bg-background dark:text-muted-foreground md:grid-cols-2">
+        <div className="grid gap-1.5 border-t border-[#edf1ea] bg-[#fbfcfa] px-3 py-2.5 text-xs leading-snug text-[#52605a] transition-colors dark:border-border dark:bg-background dark:text-muted-foreground sm:gap-2 sm:px-4 sm:py-3 sm:text-sm md:grid-cols-2">
           {rules.map((rule) => (
             <div key={rule} className="flex gap-2">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#16735f]" />
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#16735f] sm:mt-2" />
               <span>{rule}</span>
             </div>
           ))}
@@ -850,11 +853,11 @@ function DashboardDock({
       aria-label="Navegacao principal"
       className={
         compact
-          ? "w-full max-w-sm rounded-2xl border border-[#d7ded3] bg-white/90 p-1.5 shadow-xl shadow-[#16735f]/15 backdrop-blur transition-colors dark:border-border dark:bg-card/90"
+          ? "w-full max-w-sm rounded-xl border border-[#d7ded3] bg-white/95 p-1 shadow-lg shadow-[#16735f]/10 backdrop-blur transition-colors dark:border-border dark:bg-card/95"
           : "rounded-2xl border border-[#d7ded3] bg-white/85 p-2 shadow-lg shadow-[#16735f]/10 backdrop-blur transition-colors dark:border-border dark:bg-card/85"
       }
     >
-      <div className={compact ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-3 gap-2"}>
+      <div className={compact ? "grid grid-cols-3 gap-1" : "grid grid-cols-3 gap-2"}>
         {items.map((item) => (
           <DockNavButton
             key={item.id}
@@ -905,26 +908,30 @@ function DockNavButton({
       aria-label={`${label}: ${meta}`}
       onClick={onClick}
       style={{ "--dock-accent": accent } as React.CSSProperties}
-      className={`relative overflow-hidden rounded-xl transition ${
+      className={`relative overflow-hidden transition ${
         active
-          ? "bg-white text-[#18201b] shadow-md dark:bg-accent dark:text-accent-foreground"
-          : "bg-white text-[#52605a] hover:bg-[#fbfcfa] hover:text-[#18201b] dark:bg-secondary dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-accent-foreground"
-      } ${compact ? "flex min-h-16 flex-col items-center justify-center px-2 py-2 text-center" : "flex min-h-20 items-center gap-3 px-4 py-3 text-left"}`}
+          ? compact
+            ? "bg-[#eaf4ef] text-[#18201b] dark:bg-accent dark:text-accent-foreground"
+            : "bg-white text-[#18201b] shadow-md dark:bg-accent dark:text-accent-foreground"
+          : compact
+            ? "bg-transparent text-[#52605a] hover:bg-[#eef2eb] hover:text-[#18201b] dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-accent-foreground"
+            : "bg-white text-[#52605a] hover:bg-[#fbfcfa] hover:text-[#18201b] dark:bg-secondary dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-accent-foreground"
+      } ${compact ? "flex min-h-12 flex-col items-center justify-center rounded-lg px-1 py-1 text-center" : "flex min-h-20 items-center gap-3 rounded-xl px-4 py-3 text-left"}`}
     >
       <span
-        className={`absolute inset-x-0 top-0 h-1 ${active ? "bg-[#16735f]" : "bg-[#d7ded3]"}`}
+        className={`absolute inset-x-3 top-0 h-0.5 rounded-full ${active ? "bg-[#16735f]" : compact ? "bg-transparent" : "bg-[#d7ded3]"}`}
       />
       <span
         className={`flex shrink-0 items-center justify-center rounded-md ${
-          compact ? "h-8 w-8" : "h-10 w-10"
-        } ${active ? "bg-[#eaf4ef] dark:bg-background" : "bg-white dark:bg-card"}`}
+          compact ? "h-6 w-6" : "h-10 w-10"
+        } ${active ? (compact ? "bg-transparent" : "bg-[#eaf4ef] dark:bg-background") : compact ? "bg-transparent" : "bg-white dark:bg-card"}`}
       >
         <Icon
-          size={compact ? 19 : 21}
+          size={compact ? 17 : 21}
           style={{ color: accent }}
         />
       </span>
-      <span className={compact ? "mt-1 block" : "min-w-0"}>
+      <span className={compact ? "mt-0.5 block min-w-0" : "min-w-0"}>
         {!compact ? (
           <span
             className="mb-0.5 block text-[10px] font-bold uppercase tracking-[0.16em]"
@@ -933,11 +940,11 @@ function DockNavButton({
             {eyebrow}
           </span>
         ) : null}
-        <span className={`${compact ? "text-xs" : "block text-lg"} font-black leading-tight`}>
+        <span className={`${compact ? "block truncate text-[11px]" : "block text-lg"} font-black leading-tight`}>
           {label}
         </span>
         <span
-          className={`${compact ? "text-[10px]" : "mt-0.5 block truncate text-xs"} ${
+          className={`${compact ? "block truncate text-[9px] leading-tight" : "mt-0.5 block truncate text-xs"} ${
             active ? "text-[#52605a] dark:text-accent-foreground/70" : "text-[#52605a] dark:text-muted-foreground"
           }`}
         >
@@ -1082,45 +1089,45 @@ function LeaderboardRow({
     <Link
       href={`/profile/${row.userId}`}
       ref={rowRef}
-      className={`grid scroll-mt-24 gap-3 rounded-md border px-3 py-3 transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#16735f]/20 sm:grid-cols-[56px_1fr_auto] sm:items-center ${podium.row} ${
+      className={`grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 scroll-mt-24 rounded-md border px-2.5 py-2.5 transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#16735f]/20 sm:grid-cols-[56px_1fr_auto] sm:gap-3 sm:px-3 sm:py-3 ${podium.row} ${
         isCurrentUser
-          ? "scale-[1.015] border-[#16735f] px-4 py-4 shadow-md ring-2 ring-[#16735f]/20 dark:border-primary dark:ring-primary/20 sm:grid-cols-[64px_1fr_auto]"
+          ? "border-[#16735f] shadow-sm ring-1 ring-[#16735f]/20 dark:border-primary dark:ring-primary/20 sm:scale-[1.015] sm:grid-cols-[64px_1fr_auto] sm:px-4 sm:py-4 sm:shadow-md sm:ring-2"
           : ""
       }`}
     >
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-md text-base font-bold ${
+        className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-bold sm:h-12 sm:w-12 sm:text-base ${
           isCurrentUser ? "sm:h-14 sm:w-14 sm:text-lg" : ""
         } ${podium.badge}`}
       >
         {rank}
       </div>
       <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className={`truncate font-semibold ${isCurrentUser ? "text-xl" : "text-lg"}`}>
+        <div className="flex min-w-0 items-center gap-1.5 sm:flex-wrap sm:gap-2">
+          <p className={`truncate font-semibold ${isCurrentUser ? "text-base sm:text-xl" : "text-sm sm:text-lg"}`}>
             {row.username}
           </p>
           {podium.label ? (
-            <span className="rounded px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#52605a] dark:bg-background/30 dark:text-current/70">
+            <span className="hidden rounded px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#52605a] dark:bg-background/30 dark:text-current/70 min-[420px]:inline sm:inline">
               {podium.label}
             </span>
           ) : null}
           {isCurrentUser ? (
-            <span className="rounded bg-[#dff3ea] px-2 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
+            <span className="rounded bg-[#dff3ea] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3] sm:px-2 sm:py-1 sm:text-xs sm:tracking-[0.12em]">
               Tu
             </span>
           ) : null}
         </div>
-        <p className="text-sm text-[#52605a] dark:text-muted-foreground">
+        <p className="truncate text-[11px] text-[#52605a] dark:text-muted-foreground sm:text-sm">
           Jogos {row.matchPoints} · Exatos {row.exactMatches} · Especiais {row.specialPoints}
         </p>
-        <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:text-primary">
+        <p className="mt-1 hidden text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:text-primary sm:block">
           Ver detalhes
         </p>
       </div>
-      <div className="flex items-center gap-2 justify-self-start rounded-md bg-white/70 px-3 py-2 font-semibold dark:bg-background/45 sm:justify-self-end">
-        <Medal className={podium.icon} size={18} />
-        {row.totalPoints} pts
+      <div className="flex items-center gap-1 justify-self-end rounded-md bg-white/70 px-2 py-1.5 text-xs font-semibold dark:bg-background/45 sm:gap-2 sm:px-3 sm:py-2 sm:text-base">
+        <Medal className={podium.icon} size={15} />
+        <span className="whitespace-nowrap">{row.totalPoints} pts</span>
       </div>
     </Link>
   );
@@ -1128,8 +1135,8 @@ function LeaderboardRow({
 
 function FieldLabel({ label, points }: { label: string; points?: number }) {
   return (
-    <span className="flex items-center justify-between gap-2 text-sm font-medium">
-      <span>{label}</span>
+    <span className="flex items-start justify-between gap-2 text-sm font-medium leading-snug">
+      <span className="min-w-0">{label}</span>
       {points !== undefined ? (
         <span className="shrink-0 rounded-full bg-[#eaf4ef] px-2 py-0.5 text-xs font-bold text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]">
           {points} pts
@@ -1380,11 +1387,17 @@ function MatchBetForm({
 
   return (
     <article className="overflow-hidden rounded-lg border border-[#d7e1d3] bg-white shadow-sm transition hover:border-[#b9cab4] hover:shadow-md dark:border-border dark:bg-card dark:hover:border-ring">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 p-3 sm:gap-3 lg:grid-cols-[1fr_auto_1fr]">
-        <TeamMatchSide align="left" name={match.homeTeam} code={match.homeTeamCode} />
+      <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-3">
+        <div className="min-w-0 sm:col-start-1 sm:row-start-1">
+          <TeamMatchSide align="left" name={match.homeTeam} code={match.homeTeamCode} />
+        </div>
+
+        <div className="min-w-0 sm:col-start-3 sm:row-start-1">
+          <TeamMatchSide align="right" name={match.awayTeam} code={match.awayTeamCode} />
+        </div>
 
         <div
-          className={`min-w-0 rounded-lg border p-2 shadow-inner lg:min-w-[230px] ${
+          className={`col-span-2 min-w-0 rounded-lg border p-2 shadow-inner sm:col-span-1 sm:col-start-2 sm:row-start-1 lg:min-w-[230px] ${
             !isBettingOpen && !isFinished && !hasBet
               ? "border-[#f1ddb2] bg-[#fffaf0] dark:border-[#9a6a18]/50 dark:bg-[#2a2114]"
               : "border-[#d7ded3] bg-[#fbfcfa] dark:border-border dark:bg-secondary"
@@ -1443,9 +1456,7 @@ function MatchBetForm({
           ) : null}
         </div>
 
-        <TeamMatchSide align="right" name={match.awayTeam} code={match.awayTeamCode} />
-
-        <div className="col-span-3 flex flex-wrap items-center gap-2 border-t border-[#edf1ea] pt-3 text-xs font-semibold text-[#52605a] dark:border-border dark:text-muted-foreground">
+        <div className="col-span-2 flex flex-wrap items-center gap-2 border-t border-[#edf1ea] pt-3 text-xs font-semibold text-[#52605a] dark:border-border dark:text-muted-foreground sm:col-span-3">
           <MatchStatePill status={match.displayStatus} kickoffAt={match.kickoffAt} />
         </div>
       </div>
@@ -1464,13 +1475,13 @@ function TeamMatchSide({
 }) {
   return (
     <span
-      className={`flex min-w-0 flex-col items-center gap-2 text-center sm:flex-row sm:text-left ${
+      className={`flex h-full min-w-0 items-center gap-2 rounded-md bg-[#fbfcfa] p-2 text-left dark:bg-background/30 sm:h-auto sm:bg-transparent sm:p-0 sm:dark:bg-transparent ${
         align === "right" ? "sm:flex-row-reverse sm:text-right" : ""
       }`}
     >
       <FlagTile code={code} name={name} />
       <span className="min-w-0 max-w-full">
-        <span className="block truncate text-xs font-bold text-[#18201b] dark:text-foreground sm:text-base">{name}</span>
+        <span className="block text-sm font-bold leading-tight text-[#18201b] dark:text-foreground sm:truncate sm:text-base">{name}</span>
         <span className="mt-1 inline-flex rounded bg-[#eef2eb] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#52605a] dark:bg-secondary dark:text-muted-foreground sm:px-2 sm:py-1 sm:text-xs">
           {code ?? "TBD"}
         </span>
