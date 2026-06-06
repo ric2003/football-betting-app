@@ -37,20 +37,20 @@ import { displayStatusForPortugalTime, type DisplayMatchStatus } from "./match-s
 
 const teamSpecialFields = [
   ["worldCupWinnerTeamId", "Vencedor do Mundial"],
-  ["mostGoalsTeamId", "Equipa com mais golos"],
-  ["fewestConcededTeamId", "Equipa com menos golos sofridos"],
+  ["mostGoalsTeamId", "Equipa com Mais Golos Marcados"],
+  ["fewestConcededTeamId", "Equipa com Menos Golos Sofridos"],
 ] as const;
 
 const playerSpecialFields = [
   ["mvpPlayerId", "MVP"],
-  ["youngMvpPlayerId", "MVP jovem"],
-  ["topScorerPlayerId", "Melhor marcador"],
-  ["topAssisterPlayerId", "Melhor assistente"],
+  ["youngMvpPlayerId", "MVP Jovem"],
+  ["topScorerPlayerId", "Melhor Marcador"],
+  ["topAssisterPlayerId", "Melhor Assistente"],
 ] as const;
 
 const numberSpecialFields = [
-  ["ownGoals", "Numero de auto-golos"],
-  ["redCards", "Numero de cartoes vermelhos"],
+  ["ownGoals", "Número de Auto-Golos"],
+  ["redCards", "Número de Cartões Vermelhos"],
 ] as const;
 
 type TeamSpecialFieldName = (typeof teamSpecialFields)[number][0];
@@ -59,12 +59,12 @@ type NumberSpecialFieldName = (typeof numberSpecialFields)[number][0];
 type SpecialFieldName = TeamSpecialFieldName | PlayerSpecialFieldName | NumberSpecialFieldName;
 
 const stageLabels = {
-  group: "Fase de grupos",
-  roundOf32: "16 avos de final",
-  roundOf16: "Oitavos de final",
-  quarterFinal: "Quartos de final",
-  semiFinal: "Meias-finais",
-  thirdPlace: "3o lugar",
+  group: "Fase de Grupos",
+  roundOf32: "16 Avos de Final",
+  roundOf16: "Oitavos de Final",
+  quarterFinal: "Quartos de Final",
+  semiFinal: "Meias-Finais",
+  thirdPlace: "3º Lugar",
   final: "Final",
 } as const;
 
@@ -283,7 +283,7 @@ function nextRelevantSectionKey(matches: MatchRow[], now: number) {
 }
 
 function sectionTypeLabel(section: MatchSection) {
-  return section.key.startsWith("group-") ? "Grupo" : "Eliminatoria";
+  return section.key.startsWith("group-") ? "Grupo" : "Eliminatória";
 }
 
 export function Dashboard() {
@@ -327,10 +327,10 @@ export function Dashboard() {
         ownGoals: toNumber(formData.get("ownGoals")),
         redCards: toNumber(formData.get("redCards")),
       });
-      setSpecialMessage("Previsoes especiais guardadas.");
+      setSpecialMessage("Previsões Especiais guardadas.");
     } catch (caught) {
       setSpecialMessage(
-        caught instanceof Error ? caught.message : "Nao foi possivel guardar.",
+        caught instanceof Error ? caught.message : "Não foi possível guardar.",
       );
     } finally {
       setSavingSpecial(false);
@@ -490,9 +490,9 @@ export function Dashboard() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#16735f] dark:text-primary">
-              Mundial Bet 2026
+              World Cup Bets 2026
             </p>
-              <h1 className="text-2xl font-semibold">Painel da liga</h1>
+              <h1 className="text-2xl font-semibold">{user?.username}</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -562,7 +562,7 @@ export function Dashboard() {
               <div className="space-y-3 p-3 sm:p-5">
                 {sections.length === 0 ? (
                   <p className="rounded-md border border-dashed border-[#cbd5c7] bg-[#fbfcfa] p-4 text-sm text-[#52605a] transition-colors dark:border-border dark:bg-secondary dark:text-muted-foreground">
-                    Ainda nao ha jogos. Um admin pode criar equipas, jogadores e jogos.
+                    Ainda não há jogos. Um admin pode criar equipas, jogadores e jogos.
                   </p>
                 ) : (
                   sections.map((section) => (
@@ -578,7 +578,7 @@ export function Dashboard() {
                   <p className="mt-4 text-xs font-medium text-[#52605a] dark:text-muted-foreground">
                     {openSectionCount === 0
                       ? "Escolhe um grupo ou fase para abrir."
-                      : `${openSectionCount} seccao aberta${openSectionCount > 1 ? "s" : ""}.`}
+                      : `${openSectionCount} Secç${openSectionCount > 1 ? "ões" : "ão"} Aberta${openSectionCount > 1 ? "s" : ""}.`}
                   </p>
                 ) : null}
               </div>
@@ -593,7 +593,7 @@ export function Dashboard() {
                   <h2 className="text-xl font-semibold">Leaderboard</h2>
                 </div>
                 <div className="rounded-md bg-[#eef2eb] px-3 py-2 text-sm font-semibold text-[#52605a] transition-colors dark:bg-secondary dark:text-muted-foreground">
-                  {leaderboard.length} jogadores
+                  {leaderboard.length} Jogador{leaderboard.length !== 1 ? "es" : ""}
                 </div>
               </div>
               <div className="mt-5 grid gap-3">
@@ -627,9 +627,9 @@ export function Dashboard() {
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold">Apostas especiais</h2>
+                <h2 className="text-xl font-semibold">Apostas Especiais</h2>
                 <p className="text-sm text-[#52605a] dark:text-muted-foreground">
-                  Disponiveis ate ao inicio do primeiro jogo.
+                  Disponíveis até ao início do primeiro jogo.
                 </p>
               </div>
               <div className="flex items-center gap-2 rounded-md bg-[#fff3d7] px-3 py-2 text-sm font-semibold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
@@ -647,8 +647,8 @@ export function Dashboard() {
               >
                 {!specialBetsAreOpen ? <Lock size={15} /> : <CalendarDays size={15} />}
                 {specialBetsAreOpen
-                  ? `Fecham em ${formatKickoff(firstKickoffAt)}.`
-                  : `Fecharam em ${formatKickoff(firstKickoffAt)}.`}
+                  ? `Fecham a ${formatKickoff(firstKickoffAt)}.`
+                  : `Fecharam a ${formatKickoff(firstKickoffAt)}.`}
               </p>
             ) : null}
 
@@ -701,7 +701,7 @@ export function Dashboard() {
                 className="flex h-10 items-center gap-2 rounded-md bg-[#16735f] px-4 text-sm font-semibold text-white hover:bg-[#0f5d4d] disabled:opacity-60"
               >
                 {savingSpecial ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                Guardar especiais
+                Guardar Apostas Especiais
               </button>
               {specialMessage ? (
                 <span className="text-sm text-[#52605a] dark:text-muted-foreground">{specialMessage}</span>
@@ -709,8 +709,8 @@ export function Dashboard() {
               {!canUseSpecials ? (
                 <span className="text-sm text-[#9a6a18]">
                   {!specialBetsAreOpen
-                    ? "As apostas especiais ja estao fechadas."
-                    : "E preciso configurar equipas, jogadores e jogadores jovens primeiro."}
+                    ? "As apostas especiais já estão fechadas."
+                    : "É preciso configurar equipas, jogadores e jogadores jovens primeiro."}
                 </span>
               ) : null}
             </div>
@@ -814,8 +814,8 @@ function DashboardDock({
       id: "games",
       label: "Jogos",
       eyebrow: "Matchday",
-      meta: `${matchCount} jogos`,
-      description: "Grupos, fases e palpites",
+      meta: `${matchCount} Jogo${matchCount !== 1 ? "s" : ""}`,
+      description: "Grupos, Fases e Apostas",
       icon: ListChecks,
       active: activeView === "games",
       accent: "#16735f",
@@ -824,9 +824,9 @@ function DashboardDock({
     {
       id: "leaderboard",
       label: "Leaderboard",
-      eyebrow: "Classificacao",
-      meta: `${leaderboardCount} jogadores`,
-      description: "Pontos e ranking da liga",
+      eyebrow: "Classificação",
+      meta: `${leaderboardCount} Jogador${leaderboardCount !== 1 ? "es" : ""}`,
+      description: "Pontos e Ranking da Liga",
       icon: Crown,
       active: activeView === "leaderboard",
       accent: "#16735f",
@@ -835,9 +835,9 @@ function DashboardDock({
     {
       id: "specials",
       label: "Especiais",
-      eyebrow: "Bola de ouro",
+      eyebrow: "Bola de Ouro",
       meta: `${specialPoints} pts`,
-      description: "Campeao, MVP e extras",
+      description: "Campeão, MVP e Extras",
       icon: Trophy,
       active: activeView === "specials",
       accent: "#16735f",
@@ -996,9 +996,9 @@ function MatchSectionPanel({
             </span>
             <span className="mt-1 block text-2xl font-black text-[#18201b] dark:text-foreground">{section.title}</span>
             <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-[#52605a] dark:text-muted-foreground">
-              <span>{section.matches.length} jogo{section.matches.length > 1 ? "s" : ""}</span>
+              <span>{section.matches.length} Jogo{section.matches.length > 1 ? "s" : ""}</span>
               <span className="text-[#8a958f]">·</span>
-              <span>primeiro: {firstKickoff}</span>
+              <span>Primeiro: {firstKickoff}</span>
             </span>
           </span>
         </span>
@@ -1006,16 +1006,16 @@ function MatchSectionPanel({
           <span className="flex flex-wrap items-center gap-2 text-xs font-bold lg:justify-end">
             {openMatches > 0 ? (
               <span className="rounded-md border border-[#d7ded3] bg-[#eaf4ef] px-2.5 py-1.5 text-[#16735f] transition-colors dark:border-border dark:bg-secondary dark:text-primary">
-                {openMatches} aberto{openMatches > 1 ? "s" : ""}
+                {openMatches} Aberto{openMatches > 1 ? "s" : ""}
               </span>
             ) : null}
             {liveMatches > 0 ? (
               <span className="rounded-md border border-[#f1ddb2] bg-[#fff3d7] px-2.5 py-1.5 text-[#9a6a18] dark:border-[#9a6a18]/50 dark:bg-[#33270d] dark:text-[#f5c542]">
-                {liveMatches} ao vivo
+                {liveMatches} Ao vivo
               </span>
             ) : null}
             <span className="rounded-md border border-[#d7ded3] bg-[#eef2eb] px-2.5 py-1.5 text-[#52605a] transition-colors dark:border-border dark:bg-secondary dark:text-muted-foreground">
-              {betMatches}/{section.matches.length} palpites
+              {betMatches}/{section.matches.length} Palpites
             </span>
           </span>
         </span>
@@ -1055,7 +1055,7 @@ function LeaderboardRow({
           row: "border-[#e0b72c] bg-[#fff5cf] dark:border-[#f4c430]/55 dark:bg-[#2f250b] dark:text-[#fff4c7]",
           badge: "bg-[#f4c430] text-[#3e2f06] dark:bg-[#f5c542] dark:text-[#1f1704]",
           icon: "text-[#8a6500] dark:text-[#f5c542]",
-          label: "Campeao",
+          label: "Campeão",
         }
       : rank === 2
         ? {
@@ -1112,7 +1112,7 @@ function LeaderboardRow({
           ) : null}
         </div>
         <p className="text-sm text-[#52605a] dark:text-muted-foreground">
-          Jogos {row.matchPoints} · Especiais {row.specialPoints} · Exatos {row.exactMatches}
+          Jogos {row.matchPoints} · Exatos {row.exactMatches} · Especiais {row.specialPoints}
         </p>
         <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-[#16735f] dark:text-primary">
           Ver detalhes
@@ -1195,7 +1195,7 @@ function OptionAutocomplete({
 
   function setAutocompleteValidity(value: string, optionId: string) {
     inputRef.current?.setCustomValidity(
-      value && !optionId ? "Escolhe uma opcao da lista." : "",
+      value && !optionId ? "Escolhe uma opção da lista." : "",
     );
   }
 
@@ -1217,7 +1217,7 @@ function OptionAutocomplete({
         type="text"
         value={inputValue}
         disabled={disabled}
-        placeholder="Comeca a escrever..."
+        placeholder="Começa a escrever..."
         autoComplete="off"
         role="combobox"
         aria-controls={dropdownId}
@@ -1301,7 +1301,7 @@ function OptionAutocomplete({
             ))
           ) : (
             <div className="px-3 py-2 text-[#52605a] dark:text-muted-foreground">
-              Sem resultados
+              Sem Resultados
             </div>
           )}
         </div>
@@ -1327,19 +1327,19 @@ function MatchBetForm({
   const hasUnsavedChanges =
     isBettingOpen && (savedHomeScore !== homeScore || savedAwayScore !== awayScore);
   const isFinished = match.displayStatus === "finished";
-  let feedback = hasBet ? "Palpite guardado" : "Escolhe o resultado";
+  let feedback = hasBet ? "Aposta Guardada" : "Escolhe o Resultado";
   if (isFinished) {
     feedback = `${ (match.bet?.points ? '+' : '' ) + (match.bet?.points ?? 0)} pts`;
   } else if (!isBettingOpen) {
-    feedback = hasBet ? `Palpite: ${savedHomeScore} - ${savedAwayScore}` : "Sem palpite";
+    feedback = hasBet ? `Aposta: ${savedHomeScore} - ${savedAwayScore}` : "Sem Aposta";
   } else if (saveState === "saving") {
     feedback = "A guardar...";
   } else if (saveState === "saved") {
     feedback = "Guardado";
   } else if (saveState === "dirty") {
-    feedback = "Alteracoes por guardar";
+    feedback = "Alterações por guardar";
   } else if (saveState === "error") {
-    feedback = message || "Nao foi possivel guardar.";
+    feedback = message || "Não foi possível guardar.";
   }
 
   async function savePrediction() {
@@ -1355,7 +1355,7 @@ function MatchBetForm({
       setSaveState("saved");
     } catch (caught) {
       setSaveState("error");
-      setMessage(caught instanceof Error ? caught.message : "Nao foi possivel guardar.");
+      setMessage(caught instanceof Error ? caught.message : "Não foi possível guardar.");
     }
   }
 
@@ -1438,7 +1438,7 @@ function MatchBetForm({
               {saveState === "saving" ? (
                 <Loader2 className="animate-spin" size={15} />
               ) : null}
-              Guardar palpite
+              Guardar Aposta
             </button>
           ) : null}
         </div>
