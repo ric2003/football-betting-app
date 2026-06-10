@@ -28,6 +28,16 @@ const specialPoints = {
   redCards: 50,
 } as const;
 
+const multiAnswerSpecialKeys = [
+  "topScorerPlayerId",
+  "topAssisterPlayerId",
+  "mostGoalsTeamId",
+  "fewestConcededTeamId",
+] as const;
+
+type MultiAnswerSpecialKey = (typeof multiAnswerSpecialKeys)[number];
+type SpecialKey = keyof typeof specialPoints;
+
 const stageLabels = {
   group: "Fase de grupos",
   roundOf32: "16 avos de final",
@@ -104,7 +114,7 @@ function scoreSpecialBet(
   ] as const;
 
   for (const key of idKeys) {
-    if (bet[key] === result[key]) total += specialPoints[key];
+    if (isCorrectSpecialAnswer(bet, result, key)) total += specialPoints[key];
   }
   if (bet.ownGoals === result.ownGoals) total += specialPoints.ownGoals;
   if (bet.redCards === result.redCards) total += specialPoints.redCards;
@@ -115,9 +125,28 @@ function scoreSpecialBet(
 function scoreSpecialField(
   bet: Doc<"specialBets">,
   result: Doc<"specialResults">,
-  key: keyof typeof specialPoints,
+  key: SpecialKey,
 ) {
-  return bet[key] === result[key] ? specialPoints[key] : 0;
+  return isCorrectSpecialAnswer(bet, result, key) ? specialPoints[key] : 0;
+}
+
+function isMultiAnswerSpecialKey(key: SpecialKey): key is MultiAnswerSpecialKey {
+  return (multiAnswerSpecialKeys as readonly string[]).includes(key);
+}
+
+function specialResultValues(result: Doc<"specialResults">, key: SpecialKey) {
+  const value = result[key];
+  return Array.isArray(value) ? value : [value];
+}
+
+function isCorrectSpecialAnswer(
+  bet: Doc<"specialBets">,
+  result: Doc<"specialResults">,
+  key: SpecialKey,
+) {
+  if (key === "ownGoals" || key === "redCards") return bet[key] === result[key];
+  if (isMultiAnswerSpecialKey(key)) return specialResultValues(result, key).includes(bet[key]);
+  return bet[key] === result[key];
 }
 
 async function requireUser(ctx: QueryCtx | MutationCtx) {
@@ -499,7 +528,10 @@ export const playerProfile = query({
             const resultValue = specialResult[key];
             const isTeam = key.endsWith("TeamId");
             const isPlayer = key.endsWith("PlayerId");
-            const formatValue = (value: typeof betValue) => {
+            const formatValue = (value: typeof betValue | typeof resultValue): string => {
+              if (Array.isArray(value)) {
+                return value.map((item) => formatValue(item)).join(" ou ");
+              }
               if (typeof value === "number") return String(value);
               if (isTeam) return teamLabel(value as Id<"teams">);
               if (isPlayer) return playerLabel(value as Id<"players">);
@@ -513,7 +545,7 @@ export const playerProfile = query({
               result: formatValue(resultValue),
               points: scoreSpecialField(specialBet, specialResult, key),
               maxPoints: specialPoints[key],
-              correct: betValue === resultValue,
+              correct: isCorrectSpecialAnswer(specialBet, specialResult, key),
             };
           })
         : [];
@@ -626,6 +658,14 @@ const specialArgs = {
   redCards: v.number(),
 };
 
+const specialResultArgs = {
+  ...specialArgs,
+  topScorerPlayerId: v.array(v.id("players")),
+  topAssisterPlayerId: v.array(v.id("players")),
+  mostGoalsTeamId: v.array(v.id("teams")),
+  fewestConcededTeamId: v.array(v.id("teams")),
+};
+
 async function validateSpecialRefs(ctx: QueryCtx | MutationCtx, args: {
   worldCupWinnerTeamId: Id<"teams">;
   mvpPlayerId: Id<"players">;
@@ -645,6 +685,42 @@ async function validateSpecialRefs(ctx: QueryCtx | MutationCtx, args: {
     requireYoungPlayer(ctx, args.youngMvpPlayerId),
     requirePlayer(ctx, args.topScorerPlayerId),
     requirePlayer(ctx, args.topAssisterPlayerId),
+  ]);
+  assertNonNegativeInteger(args.ownGoals, "Auto-golos");
+  assertNonNegativeInteger(args.redCards, "Cartoes vermelhos");
+}
+
+async function validateSpecialResultRefs(ctx: QueryCtx | MutationCtx, args: {
+  worldCupWinnerTeamId: Id<"teams">;
+  mvpPlayerId: Id<"players">;
+  youngMvpPlayerId: Id<"players">;
+  topScorerPlayerId: Array<Id<"players">>;
+  topAssisterPlayerId: Array<Id<"players">>;
+  mostGoalsTeamId: Array<Id<"teams">>;
+  fewestConcededTeamId: Array<Id<"teams">>;
+  ownGoals: number;
+  redCards: number;
+}) {
+  const assertAnswers = (values: unknown[], label: string) => {
+    if (values.length === 0) throw new Error(`${label} precisa de pelo menos uma resposta.`);
+    if (new Set(values).size !== values.length) {
+      throw new Error(`${label} tem respostas repetidas.`);
+    }
+  };
+
+  assertAnswers(args.topScorerPlayerId, specialLabels.topScorerPlayerId);
+  assertAnswers(args.topAssisterPlayerId, specialLabels.topAssisterPlayerId);
+  assertAnswers(args.mostGoalsTeamId, specialLabels.mostGoalsTeamId);
+  assertAnswers(args.fewestConcededTeamId, specialLabels.fewestConcededTeamId);
+
+  await Promise.all([
+    requireTeam(ctx, args.worldCupWinnerTeamId),
+    ...args.mostGoalsTeamId.map((teamId) => requireTeam(ctx, teamId)),
+    ...args.fewestConcededTeamId.map((teamId) => requireTeam(ctx, teamId)),
+    requirePlayer(ctx, args.mvpPlayerId),
+    requireYoungPlayer(ctx, args.youngMvpPlayerId),
+    ...args.topScorerPlayerId.map((playerId) => requirePlayer(ctx, playerId)),
+    ...args.topAssisterPlayerId.map((playerId) => requirePlayer(ctx, playerId)),
   ]);
   assertNonNegativeInteger(args.ownGoals, "Auto-golos");
   assertNonNegativeInteger(args.redCards, "Cartoes vermelhos");
@@ -949,10 +1025,10 @@ export const setMatchStatusAndResult = mutation({
 });
 
 export const setSpecialResults = mutation({
-  args: specialArgs,
+  args: specialResultArgs,
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await validateSpecialRefs(ctx, args);
+    await validateSpecialResultRefs(ctx, args);
     const existing = await ctx.db.query("specialResults").first();
     const payload = { ...args, updatedAt: Date.now() };
 

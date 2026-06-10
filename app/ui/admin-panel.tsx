@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { displayStatusForPortugalTime, type DisplayMatchStatus } from "./match-status";
@@ -60,6 +61,13 @@ const numberSpecialFields = [
   ["ownGoals", "Numero de auto-golos"],
   ["redCards", "Numero de cartoes vermelhos"],
 ] as const;
+
+const multiAnswerSpecialFields = new Set([
+  "topScorerPlayerId",
+  "topAssisterPlayerId",
+  "mostGoalsTeamId",
+  "fewestConcededTeamId",
+]);
 
 const knockoutStageOrder: Array<MatchRow["stage"]> = [
   "roundOf32",
@@ -123,6 +131,20 @@ function toOptionalNumber(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   if (!text) return undefined;
   return Number.parseInt(text, 10);
+}
+
+function formDataIds<T extends "teams" | "players">(formData: FormData, name: string) {
+  return formData
+    .getAll(name)
+    .map((value) => String(value))
+    .filter(Boolean) as Array<Id<T>>;
+}
+
+function specialResultIds<T extends "teams" | "players">(
+  value: Id<T> | Array<Id<T>> | undefined,
+) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 function dateTimeLocal(value: number) {
@@ -349,10 +371,10 @@ export function AdminPanel() {
           worldCupWinnerTeamId: String(formData.get("worldCupWinnerTeamId")) as Id<"teams">,
           mvpPlayerId: String(formData.get("mvpPlayerId")) as Id<"players">,
           youngMvpPlayerId: String(formData.get("youngMvpPlayerId")) as Id<"players">,
-          topScorerPlayerId: String(formData.get("topScorerPlayerId")) as Id<"players">,
-          topAssisterPlayerId: String(formData.get("topAssisterPlayerId")) as Id<"players">,
-          mostGoalsTeamId: String(formData.get("mostGoalsTeamId")) as Id<"teams">,
-          fewestConcededTeamId: String(formData.get("fewestConcededTeamId")) as Id<"teams">,
+          topScorerPlayerId: formDataIds<"players">(formData, "topScorerPlayerId"),
+          topAssisterPlayerId: formDataIds<"players">(formData, "topAssisterPlayerId"),
+          mostGoalsTeamId: formDataIds<"teams">(formData, "mostGoalsTeamId"),
+          fewestConcededTeamId: formDataIds<"teams">(formData, "fewestConcededTeamId"),
           ownGoals: toOptionalNumber(formData.get("ownGoals")) ?? 0,
           redCards: toOptionalNumber(formData.get("redCards")) ?? 0,
         });
@@ -365,24 +387,24 @@ export function AdminPanel() {
 
   if (data === undefined) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2]">
-        <Loader2 className="animate-spin text-[#16735f]" size={28} />
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2] transition-colors dark:bg-background">
+        <Loader2 className="animate-spin text-[#16735f] dark:text-primary" size={28} />
       </main>
     );
   }
 
   if (data === null) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2] px-4">
-        <section className="rounded-lg border border-[#d7ded3] bg-white p-6 text-center">
+      <main className="flex min-h-screen items-center justify-center bg-[#f6f7f2] px-4 text-[#18201b] transition-colors dark:bg-background dark:text-foreground">
+        <section className="rounded-lg border border-[#d7ded3] bg-white p-6 text-center shadow-sm transition-colors dark:border-border dark:bg-card">
           <Shield className="mx-auto text-[#b43b2f]" size={28} />
           <h1 className="mt-3 text-xl font-semibold">Acesso reservado</h1>
-          <p className="mt-2 text-sm text-[#52605a]">
+          <p className="mt-2 text-sm text-[#52605a] dark:text-muted-foreground">
             Apenas administradores podem gerir resultados.
           </p>
           <Link
             href="/"
-            className="mt-5 inline-flex h-10 items-center gap-2 rounded-md bg-[#18201b] px-4 text-sm font-semibold text-white"
+            className="mt-5 inline-flex h-10 items-center gap-2 rounded-md bg-[#18201b] px-4 text-sm font-semibold text-white transition hover:bg-[#2b342f] dark:bg-primary dark:text-primary-foreground"
           >
             <ArrowLeft size={16} />
             Voltar
@@ -405,22 +427,30 @@ export function AdminPanel() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7f2] text-[#18201b]">
-      <header className="border-b border-[#dfe5dc] bg-white">
+    <main className="min-h-screen bg-[#f6f7f2] text-[#18201b] transition-colors dark:bg-background dark:text-foreground">
+      <header className="border-b border-[#dfe5dc] bg-white shadow-sm transition-colors dark:border-border dark:bg-card dark:text-card-foreground">
+        <div className="h-1 bg-[#16735f]" />
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#16735f]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#16735f] dark:text-primary">
               Mundial Bet 2026
             </p>
             <h1 className="text-2xl font-semibold">Admin</h1>
           </div>
-          <Link
-            href="/"
-            className="flex h-10 items-center gap-2 rounded-md border border-[#d7ded3] bg-white px-3 text-sm font-semibold hover:bg-[#eef2eb]"
-          >
-            <ArrowLeft size={16} />
-            Voltar ao painel
-          </Link>
+          <div className="flex items-center gap-2">
+            <AnimatedThemeToggler
+              aria-label="Alternar modo escuro"
+              className="hidden h-10 w-10 items-center justify-center rounded-md border border-[#d7ded3] bg-white text-[#16735f] transition hover:bg-[#eef2eb] dark:border-border dark:bg-secondary dark:text-foreground dark:hover:bg-accent sm:flex [&_svg]:h-4 [&_svg]:w-4"
+              variant="circle"
+            />
+            <Link
+              href="/"
+              className="flex h-10 items-center gap-2 rounded-md border border-[#d7ded3] bg-white px-3 text-sm font-semibold transition hover:bg-[#eef2eb] dark:border-border dark:bg-secondary dark:hover:bg-accent"
+            >
+              <ArrowLeft size={16} />
+              Voltar ao painel
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -432,13 +462,13 @@ export function AdminPanel() {
           <StatTile icon={<ListChecks size={18} />} label="Jogos" value={matches.length} />
         </section>
 
-        <section className="rounded-lg border border-[#d7ded3] bg-white p-5">
+        <section className="rounded-lg border border-[#d7ded3] bg-white p-5 shadow-sm transition-colors dark:border-border dark:bg-card">
           <SectionHeader
             title="Catalogo"
             description="Gere jogadores, equipas e jogos a partir de uma area unica."
           />
 
-          <div className="mt-5 grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-2 sm:grid-cols-3">
+          <div className="mt-5 grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-2 transition-colors dark:border-border dark:bg-background sm:grid-cols-3">
             <CatalogTabButton
               active={activeCatalogTab === "games"}
               icon={<ListChecks size={17} />}
@@ -464,7 +494,7 @@ export function AdminPanel() {
 
           {activeCatalogTab === "teams" ? (
             <div className="mt-5 grid gap-5">
-              <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4">
+              <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4 transition-colors dark:border-border dark:bg-background">
                 <FormHeader icon={<Users size={18} />} title="Nova equipa" />
                 <form onSubmit={onCreateTeam} className="mt-4 grid gap-3 sm:grid-cols-[1fr_110px_110px_auto]">
                   <Input name="name" label="Nome" required />
@@ -489,7 +519,7 @@ export function AdminPanel() {
 
           {activeCatalogTab === "players" ? (
             <div className="mt-5 grid gap-5">
-              <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4">
+              <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4 transition-colors dark:border-border dark:bg-background">
                 <FormHeader icon={<User size={18} />} title="Novo jogador" />
                 <form onSubmit={onCreatePlayer} className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_120px_auto]">
                   <Input name="name" label="Nome" required />
@@ -514,7 +544,7 @@ export function AdminPanel() {
 
           {activeCatalogTab === "games" ? (
             <div className="mt-5 grid gap-5">
-              <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4">
+              <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4 transition-colors dark:border-border dark:bg-background">
                 <FormHeader icon={<Plus size={18} />} title="Criar jogo" />
                 <form onSubmit={onCreateMatch} className="mt-4 grid gap-4 md:grid-cols-3">
                   <TeamSelect name="homeTeamId" label="Casa" teams={teams} required />
@@ -524,7 +554,7 @@ export function AdminPanel() {
                     <input
                       name="kickoffAt"
                       type="datetime-local"
-                      className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
+                      className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground"
                       required
                     />
                   </label>
@@ -533,7 +563,7 @@ export function AdminPanel() {
                   <button
                     type="submit"
                     disabled={pending === "match" || teams.length < 2}
-                    className="mt-7 flex h-10 items-center justify-center gap-2 rounded-md bg-[#16735f] px-4 text-sm font-semibold text-white hover:bg-[#0f5d4d] disabled:opacity-60"
+                    className="mt-6 flex h-10 items-center justify-center gap-2 rounded-md bg-[#16735f] px-4 text-sm font-semibold text-white transition hover:bg-[#0f5d4d] disabled:opacity-60"
                   >
                     {pending === "match" ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
                     Criar jogo
@@ -563,7 +593,7 @@ export function AdminPanel() {
 
         <form
           onSubmit={onSpecialSubmit}
-          className="rounded-lg border border-[#d7ded3] bg-white p-5"
+          className="rounded-lg border border-[#d7ded3] bg-white p-5 shadow-sm transition-colors dark:border-border dark:bg-card"
         >
           <SectionHeader
             title="Resultados especiais"
@@ -571,24 +601,46 @@ export function AdminPanel() {
           />
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {teamSpecialFields.map(([name, label]) => (
-              <OptionAutocomplete
-                key={`${name}-${data.specialResult?.[name] ?? ""}`}
-                name={name}
-                label={label}
-                options={teamOptions}
-                defaultValue={data.specialResult?.[name] ?? ""}
-                required
-              />
+              multiAnswerSpecialFields.has(name) ? (
+                <MultiOptionAutocomplete
+                  key={`${name}-${specialResultIds(data.specialResult?.[name]).join("-")}`}
+                  name={name}
+                  label={label}
+                  options={teamOptions}
+                  defaultValues={specialResultIds(data.specialResult?.[name])}
+                  required
+                />
+              ) : (
+                <OptionAutocomplete
+                  key={`${name}-${data.specialResult?.[name] ?? ""}`}
+                  name={name}
+                  label={label}
+                  options={teamOptions}
+                  defaultValue={String(data.specialResult?.[name] ?? "")}
+                  required
+                />
+              )
             ))}
             {playerSpecialFields.map(([name, label]) => (
-              <OptionAutocomplete
-                key={`${name}-${data.specialResult?.[name] ?? ""}`}
-                name={name}
-                label={label}
-                options={name === "youngMvpPlayerId" ? youngPlayerOptions : playerOptions}
-                defaultValue={data.specialResult?.[name] ?? ""}
-                required
-              />
+              multiAnswerSpecialFields.has(name) ? (
+                <MultiOptionAutocomplete
+                  key={`${name}-${specialResultIds(data.specialResult?.[name]).join("-")}`}
+                  name={name}
+                  label={label}
+                  options={playerOptions}
+                  defaultValues={specialResultIds(data.specialResult?.[name])}
+                  required
+                />
+              ) : (
+                <OptionAutocomplete
+                  key={`${name}-${data.specialResult?.[name] ?? ""}`}
+                  name={name}
+                  label={label}
+                  options={name === "youngMvpPlayerId" ? youngPlayerOptions : playerOptions}
+                  defaultValue={String(data.specialResult?.[name] ?? "")}
+                  required
+                />
+              )
             ))}
             {numberSpecialFields.map(([name, label]) => (
               <Input
@@ -611,9 +663,9 @@ export function AdminPanel() {
               {pending === "special" ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
               Guardar resultados
             </button>
-            {specialMessage ? <span className="text-sm text-[#52605a]">{specialMessage}</span> : null}
+            {specialMessage ? <span className="text-sm text-[#52605a] dark:text-muted-foreground">{specialMessage}</span> : null}
             {!canSetSpecials ? (
-              <span className="text-sm text-[#9a6a18]">
+              <span className="text-sm text-[#9a6a18] dark:text-[#f5c542]">
                 Configura equipas, jogadores e jovens primeiro.
               </span>
             ) : null}
@@ -634,12 +686,12 @@ function StatTile({
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[#d7ded3] bg-white px-4 py-3">
-      <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#eaf4ef] text-[#16735f]">
+    <div className="flex items-center gap-3 rounded-lg border border-[#d7ded3] bg-white px-4 py-3 shadow-sm transition-colors dark:border-border dark:bg-card">
+      <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#eaf4ef] text-[#16735f] transition-colors dark:bg-secondary dark:text-primary">
         {icon}
       </span>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#52605a]">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#52605a] dark:text-muted-foreground">{label}</p>
         <p className="text-xl font-semibold">{value}</p>
       </div>
     </div>
@@ -657,7 +709,7 @@ function SectionHeader({
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h2 className="text-xl font-semibold">{title}</h2>
-        <p className="mt-1 text-sm text-[#52605a]">{description}</p>
+        <p className="mt-1 text-sm text-[#52605a] dark:text-muted-foreground">{description}</p>
       </div>
     </div>
   );
@@ -665,8 +717,8 @@ function SectionHeader({
 
 function FormHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="flex items-center gap-2 text-[#18201b]">
-      <span className="text-[#16735f]">{icon}</span>
+    <div className="flex items-center gap-2 text-[#18201b] dark:text-foreground">
+      <span className="text-[#16735f] dark:text-primary">{icon}</span>
       <h3 className="font-semibold">{title}</h3>
     </div>
   );
@@ -675,10 +727,10 @@ function FormHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
 function ListHeader({ title, count }: { title: string; count: number }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#52605a]">
+      <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#52605a] dark:text-muted-foreground">
         {title}
       </h3>
-      <span className="rounded bg-[#eef2eb] px-2 py-1 text-xs font-semibold text-[#52605a]">
+      <span className="rounded bg-[#eef2eb] px-2 py-1 text-xs font-semibold text-[#52605a] dark:bg-secondary dark:text-muted-foreground">
         {count}
       </span>
     </div>
@@ -686,7 +738,7 @@ function ListHeader({ title, count }: { title: string; count: number }) {
 }
 
 function StatusMessage({ text }: { text: string }) {
-  return <p className="mt-3 text-sm font-medium text-[#52605a]">{text}</p>;
+  return <p className="mt-3 text-sm font-medium text-[#52605a] dark:text-muted-foreground">{text}</p>;
 }
 
 function CatalogTabButton({
@@ -709,19 +761,19 @@ function CatalogTabButton({
       className={`flex min-h-14 items-center gap-3 rounded-md px-4 py-3 text-left transition ${
         active
           ? "bg-[#16735f] text-white shadow-sm"
-          : "text-[#52605a] hover:bg-[#eef2eb] hover:text-[#18201b]"
+          : "text-[#52605a] hover:bg-[#eef2eb] hover:text-[#18201b] dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-foreground"
       }`}
     >
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${
-          active ? "bg-white/15" : "bg-[#eef2eb]"
+          active ? "bg-white/15" : "bg-[#eef2eb] dark:bg-secondary"
         }`}
       >
         {icon}
       </span>
       <span className="min-w-0">
         <span className="block font-semibold">{label}</span>
-        <span className={`block text-xs ${active ? "text-white/80" : "text-[#718078]"}`}>
+        <span className={`block text-xs ${active ? "text-white/80" : "text-[#718078] dark:text-muted-foreground"}`}>
           {meta}
         </span>
       </span>
@@ -744,15 +796,15 @@ function AdminMatchSectionPanel({
   const finishedMatches = section.matches.filter((match) => match.displayStatus === "finished").length;
 
   return (
-    <section className="rounded-md border border-[#edf1ea] bg-white">
+    <section className="rounded-md border border-[#edf1ea] bg-white transition-colors dark:border-border dark:bg-card">
       <button
         type="button"
         onClick={onToggle}
-        className="grid w-full gap-3 px-4 py-3 text-left transition hover:bg-[#f8faf6] sm:grid-cols-[1fr_auto]"
+        className="grid w-full gap-3 px-4 py-3 text-left transition hover:bg-[#f8faf6] dark:hover:bg-accent sm:grid-cols-[1fr_auto]"
         aria-expanded={isOpen}
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eef2eb] text-[#16735f]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eef2eb] text-[#16735f] dark:bg-secondary dark:text-primary">
             <ChevronDown
               size={17}
               className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -760,26 +812,26 @@ function AdminMatchSectionPanel({
           </span>
           <span className="min-w-0">
             <span className="block font-semibold">{section.title}</span>
-            <span className="block text-xs text-[#52605a]">
+            <span className="block text-xs text-[#52605a] dark:text-muted-foreground">
               {section.matches.length} jogos · primeiro: {formatKickoff(section.matches[0].kickoffAt)}
             </span>
           </span>
         </span>
-        <span className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#52605a] sm:justify-end">
+        <span className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#52605a] dark:text-muted-foreground sm:justify-end">
           {liveMatches > 0 ? (
-            <span className="rounded bg-[#fff3d7] px-2 py-1 text-[#9a6a18]">
+            <span className="rounded bg-[#fff3d7] px-2 py-1 text-[#9a6a18] dark:bg-[#33270d] dark:text-[#f5c542]">
               {liveMatches} ao vivo
             </span>
           ) : null}
           {finishedMatches > 0 ? (
-            <span className="rounded bg-[#eef2eb] px-2 py-1 text-[#52605a]">
+            <span className="rounded bg-[#eef2eb] px-2 py-1 text-[#52605a] dark:bg-secondary dark:text-muted-foreground">
               {finishedMatches} terminado{finishedMatches > 1 ? "s" : ""}
             </span>
           ) : null}
         </span>
       </button>
       {isOpen ? (
-        <div className="grid gap-3 border-t border-[#edf1ea] p-3">
+        <div className="grid gap-3 border-t border-[#edf1ea] p-3 dark:border-border">
           {section.matches.map((match) => (
             <MatchEditForm key={match._id} match={match} teams={teams} />
           ))}
@@ -814,12 +866,12 @@ function TeamEditForm({ team }: { team: TeamRow }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-3 sm:grid-cols-[1fr_90px_90px_auto]">
+    <form onSubmit={onSubmit} className="grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-3 transition-colors dark:border-border dark:bg-background sm:grid-cols-[1fr_90px_90px_auto]">
       <Input name="name" label="Nome" defaultValue={team.name} required compact />
       <Input name="code" label="Codigo" defaultValue={team.code ?? ""} compact />
       <GroupSelect name="group" label="Grupo" defaultValue={team.group ?? ""} compact />
       <IconSubmit pending={pending} label="Atualizar equipa" icon="edit" />
-      {message ? <p className="text-xs text-[#52605a] sm:col-span-4">{message}</p> : null}
+      {message ? <p className="text-xs text-[#52605a] dark:text-muted-foreground sm:col-span-4">{message}</p> : null}
     </form>
   );
 }
@@ -849,12 +901,12 @@ function PlayerEditForm({ player, teams }: { player: PlayerRow; teams: TeamRow[]
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-3 sm:grid-cols-[1fr_1fr_100px_auto]">
+    <form onSubmit={onSubmit} className="grid gap-2 rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-3 transition-colors dark:border-border dark:bg-background sm:grid-cols-[1fr_1fr_100px_auto]">
       <Input name="name" label="Nome" defaultValue={player.name} required compact />
       <TeamSelect name="teamId" label="Equipa" teams={teams} defaultValue={player.teamId} required compact />
       <CheckboxField name="isYoung" label="Jovem" defaultChecked={player.isYoung} compact />
       <IconSubmit pending={pending} label="Atualizar jogador" icon="edit" />
-      {message ? <p className="text-xs text-[#52605a] sm:col-span-4">{message}</p> : null}
+      {message ? <p className="text-xs text-[#52605a] dark:text-muted-foreground sm:col-span-4">{message}</p> : null}
     </form>
   );
 }
@@ -910,16 +962,16 @@ function MatchEditForm({ match, teams }: { match: MatchRow; teams: TeamRow[] }) 
   }
 
   return (
-    <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4">
+    <section className="rounded-md border border-[#edf1ea] bg-[#fbfcfa] p-4 transition-colors dark:border-border dark:bg-background">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold">
             {match.homeTeam} vs {match.awayTeam}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[#52605a]">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[#52605a] dark:text-muted-foreground">
             <CalendarDays size={16} />
             {formatKickoff(match.kickoffAt)}
-            <span className="rounded bg-[#eef2eb] px-2 py-1 text-xs font-semibold text-[#52605a]">
+            <span className="rounded bg-[#eef2eb] px-2 py-1 text-xs font-semibold text-[#52605a] dark:bg-secondary dark:text-muted-foreground">
               {displayStatuses[match.displayStatus]}
             </span>
           </div>
@@ -934,7 +986,7 @@ function MatchEditForm({ match, teams }: { match: MatchRow; teams: TeamRow[] }) 
             name="kickoffAt"
             type="datetime-local"
             defaultValue={dateTimeLocal(match.kickoffAt)}
-            className="mt-1 h-9 w-full rounded-md border border-[#d7ded3] px-3 text-sm outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4"
+            className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 text-sm outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground"
             required
           />
         </label>
@@ -949,7 +1001,7 @@ function MatchEditForm({ match, teams }: { match: MatchRow; teams: TeamRow[] }) 
         <button
           type="submit"
           disabled={pending === "match"}
-          className="flex h-9 items-center justify-center gap-2 rounded-md bg-[#16735f] px-3 text-sm font-semibold text-white hover:bg-[#0f5d4d] disabled:opacity-60"
+          className="mt-6 flex h-10 items-center justify-center gap-2 rounded-md bg-[#16735f] px-3 text-sm font-semibold text-white transition hover:bg-[#0f5d4d] disabled:opacity-60"
         >
           {pending === "match" ? <Loader2 className="animate-spin" size={15} /> : <Save size={15} />}
           Guardar
@@ -958,21 +1010,21 @@ function MatchEditForm({ match, teams }: { match: MatchRow; teams: TeamRow[] }) 
       {canTerminate ? (
         <form
           onSubmit={onTerminateMatch}
-          className="mt-3 grid gap-3 rounded-md border border-[#fff3d7] bg-[#fffaf0] p-3 md:grid-cols-[90px_90px_auto]"
+          className="mt-3 grid gap-3 rounded-md border border-[#fff3d7] bg-[#fffaf0] p-3 transition-colors dark:border-[#9a6a18]/50 dark:bg-[#2a2114] md:grid-cols-[90px_90px_auto]"
         >
           <Input name="homeScore" label="Casa" type="number" min="0" compact required />
           <Input name="awayScore" label="Fora" type="number" min="0" compact required />
           <button
             type="submit"
             disabled={pending === "terminate"}
-            className="flex h-9 items-center justify-center gap-2 rounded-md bg-[#9a6a18] px-3 text-sm font-semibold text-white hover:bg-[#7b5613] disabled:opacity-60"
+            className="mt-6 flex h-10 items-center justify-center gap-2 rounded-md bg-[#9a6a18] px-3 text-sm font-semibold text-white transition hover:bg-[#7b5613] disabled:opacity-60"
           >
             {pending === "terminate" ? <Loader2 className="animate-spin" size={15} /> : <Save size={15} />}
             Terminar
           </button>
         </form>
       ) : null}
-      {message ? <p className="mt-2 text-sm text-[#52605a]">{message}</p> : null}
+      {message ? <p className="mt-2 text-sm text-[#52605a] dark:text-muted-foreground">{message}</p> : null}
     </section>
   );
 }
@@ -987,8 +1039,8 @@ function Input({
       <span className={compact ? "text-xs font-medium" : "text-sm font-medium"}>{label}</span>
       <input
         {...props}
-        className={`mt-1 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 disabled:bg-[#eef2eb] ${
-          compact ? "h-9 text-sm" : "h-10"
+        className={`mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 disabled:bg-[#eef2eb] disabled:text-[#8a958f] dark:border-border dark:bg-input/30 dark:text-foreground dark:disabled:bg-secondary dark:disabled:text-muted-foreground ${
+          compact ? "text-sm" : ""
         }`}
       />
     </label>
@@ -1012,8 +1064,8 @@ function CheckboxField({
         {label}
       </span>
       <span
-        className={`mt-1 flex w-full items-center gap-2 rounded-md border border-[#d7ded3] bg-white px-3 ${
-          compact ? "h-9 text-sm" : "h-10"
+        className={`mt-2 flex h-10 w-full items-center gap-2 rounded-md border border-[#d7ded3] bg-white px-3 transition-colors dark:border-border dark:bg-input/30 ${
+          compact ? "text-sm" : ""
         }`}
       >
         <input
@@ -1131,7 +1183,7 @@ function OptionAutocomplete({
           setAutocompleteValidity(inputValue, selectedId);
           window.setTimeout(() => setIsOpen(false), 100);
         }}
-        className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground"
+        className="mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground"
         required={required}
       />
       <input name={name} type="hidden" value={selectedId} readOnly />
@@ -1172,6 +1224,180 @@ function OptionAutocomplete({
   );
 }
 
+function MultiOptionAutocomplete({
+  name,
+  label,
+  options,
+  defaultValues = [],
+  required,
+}: {
+  name: string;
+  label: string;
+  options: CatalogOption[];
+  defaultValues?: string[];
+  required?: boolean;
+}) {
+  const inputId = useId();
+  const dropdownId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const initialSelected = defaultValues.filter((id) => options.some((option) => option.id === id));
+  const [inputValue, setInputValue] = useState("");
+  const [selectedIds, setSelectedIds] = useState(initialSelected);
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const selectedOptions = selectedIds
+    .map((id) => options.find((option) => option.id === id))
+    .filter((option): option is CatalogOption => Boolean(option));
+  const filteredOptions = useMemo(() => {
+    const selected = new Set(selectedIds);
+    const query = inputValue.trim().toLocaleLowerCase("pt-PT");
+    return options.filter((option) => {
+      if (selected.has(option.id)) return false;
+      return !query || option.label.toLocaleLowerCase("pt-PT").includes(query);
+    });
+  }, [inputValue, options, selectedIds]);
+
+  function setAutocompleteValidity() {
+    inputRef.current?.setCustomValidity(
+      required && selectedIds.length === 0 ? "Escolhe pelo menos uma opcao." : "",
+    );
+  }
+
+  function addOption(option: CatalogOption) {
+    setSelectedIds((current) => (current.includes(option.id) ? current : [...current, option.id]));
+    setInputValue("");
+    setIsOpen(false);
+    window.setTimeout(setAutocompleteValidity, 0);
+  }
+
+  function removeOption(optionId: string) {
+    setSelectedIds((current) => current.filter((id) => id !== optionId));
+    window.setTimeout(setAutocompleteValidity, 0);
+  }
+
+  return (
+    <div className={`relative block ${isOpen ? "z-[100]" : ""}`}>
+      <label htmlFor={inputId} className="text-sm font-medium">
+        {label}
+      </label>
+      <div
+        className={`mt-2 rounded-md border border-[#d7ded3] bg-white px-2 ring-[#16735f]/20 transition focus-within:border-[#16735f] focus-within:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground ${
+          selectedOptions.length > 0 ? "min-h-10 py-2" : "flex h-10 items-center"
+        }`}
+      >
+        {selectedOptions.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {selectedOptions.map((option) => (
+              <span
+                key={option.id}
+                className="inline-flex items-center gap-2 rounded bg-[#eef2eb] px-2 py-1 text-xs font-semibold text-[#18201b] dark:bg-secondary dark:text-foreground"
+              >
+                {option.label}
+                <button
+                  type="button"
+                  onClick={() => removeOption(option.id)}
+                  className="text-[#52605a] hover:text-[#b43b2f] dark:text-muted-foreground dark:hover:text-destructive"
+                  aria-label={`Remover ${option.label}`}
+                >
+                  x
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <input
+          id={inputId}
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          placeholder="Comeca a escrever..."
+          autoComplete="off"
+          role="combobox"
+          aria-controls={dropdownId}
+          aria-expanded={isOpen}
+          aria-autocomplete="list"
+          aria-activedescendant={
+            isOpen && filteredOptions[highlightedIndex]
+              ? `${dropdownId}-${filteredOptions[highlightedIndex].id}`
+              : undefined
+          }
+          onFocus={() => {
+            setHighlightedIndex(0);
+            setIsOpen(true);
+            setAutocompleteValidity();
+          }}
+          onChange={(event) => {
+            setInputValue(event.currentTarget.value);
+            setHighlightedIndex(0);
+            setIsOpen(true);
+            setAutocompleteValidity();
+          }}
+          onKeyDown={(event) => {
+            if (!isOpen && ["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) {
+              setIsOpen(true);
+            }
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setHighlightedIndex((current) =>
+                filteredOptions.length === 0 ? 0 : Math.min(current + 1, filteredOptions.length - 1),
+              );
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setHighlightedIndex((current) => Math.max(current - 1, 0));
+            } else if (event.key === "Enter" && isOpen) {
+              const option = filteredOptions[highlightedIndex];
+              if (option) {
+                event.preventDefault();
+                addOption(option);
+              }
+            } else if (event.key === "Escape") {
+              setIsOpen(false);
+            }
+          }}
+          onBlur={() => {
+            setAutocompleteValidity();
+            window.setTimeout(() => setIsOpen(false), 100);
+          }}
+          className="h-8 w-full border-0 bg-transparent px-1 outline-none"
+          required={required && selectedIds.length === 0}
+        />
+      </div>
+      {selectedIds.map((id) => (
+        <input key={id} name={name} type="hidden" value={id} readOnly />
+      ))}
+      {isOpen ? (
+        <div
+          id={dropdownId}
+          role="listbox"
+          className="absolute left-0 right-0 z-[100] mt-1 max-h-44 w-full overflow-y-auto rounded-md border border-[#d7ded3] bg-white py-1 text-sm text-[#18201b] shadow-xl dark:border-border dark:bg-popover dark:text-popover-foreground"
+        >
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option, index) => (
+              <button
+                key={option.id}
+                id={`${dropdownId}-${option.id}`}
+                type="button"
+                role="option"
+                aria-selected={false}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                onClick={() => addOption(option)}
+                className={`block w-full px-3 py-2 text-left focus:outline-none ${
+                  highlightedIndex === index ? "bg-[#eef2eb] dark:bg-accent" : "hover:bg-[#eef2eb] dark:hover:bg-accent"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-[#52605a] dark:text-muted-foreground">Sem resultados</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TeamSelect({
   name,
   label,
@@ -1194,8 +1420,8 @@ function TeamSelect({
         name={name}
         defaultValue={defaultValue}
         required={required}
-        className={`mt-1 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 ${
-          compact ? "h-9 text-sm" : "h-10"
+        className={`mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground ${
+          compact ? "text-sm" : ""
         }`}
       >
         <option value="" disabled={required}>
@@ -1231,8 +1457,8 @@ function GroupSelect({
         name={name}
         defaultValue={defaultValue}
         disabled={disabled}
-        className={`mt-1 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 disabled:bg-[#eef2eb] disabled:text-[#8a958f] ${
-          compact ? "h-9 text-sm" : "h-10"
+        className={`mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 disabled:bg-[#eef2eb] disabled:text-[#8a958f] dark:border-border dark:bg-input/30 dark:text-foreground dark:disabled:bg-secondary dark:disabled:text-muted-foreground ${
+          compact ? "text-sm" : ""
         }`}
       >
         <option value="">Sem grupo</option>
@@ -1266,8 +1492,8 @@ function StageSelect({
         name={name}
         defaultValue={defaultValue}
         onChange={onChange}
-        className={`mt-1 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 ${
-          compact ? "h-9 text-sm" : "h-10"
+        className={`mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground ${
+          compact ? "text-sm" : ""
         }`}
       >
         {stages.map(([value, labelText]) => (
@@ -1329,8 +1555,8 @@ function StatusSelect({
       <select
         name={name}
         defaultValue={defaultValue}
-        className={`mt-1 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 focus:border-[#16735f] focus:ring-4 ${
-          compact ? "h-9 text-sm" : "h-10"
+        className={`mt-2 h-10 w-full rounded-md border border-[#d7ded3] bg-white px-3 outline-none ring-[#16735f]/20 transition focus:border-[#16735f] focus:ring-4 dark:border-border dark:bg-input/30 dark:text-foreground ${
+          compact ? "text-sm" : ""
         }`}
       >
         {statuses.map(([value, labelText]) => (
@@ -1358,7 +1584,7 @@ function IconSubmit({
     <button
       type="submit"
       disabled={pending || disabled}
-      className="mt-6 flex h-10 items-center justify-center gap-2 rounded-md bg-[#16735f] px-3 text-sm font-semibold text-white hover:bg-[#0f5d4d] disabled:opacity-60"
+      className="mt-6 flex h-10 items-center justify-center gap-2 rounded-md bg-[#16735f] px-3 text-sm font-semibold text-white transition hover:bg-[#0f5d4d] disabled:opacity-60"
       aria-label={label}
     >
       {pending ? <Loader2 className="animate-spin" size={16} /> : icon === "plus" ? <Plus size={16} /> : <Pencil size={16} />}
@@ -1369,7 +1595,7 @@ function IconSubmit({
 
 function EmptyLine({ text }: { text: string }) {
   return (
-    <p className="rounded-md border border-dashed border-[#cbd5c7] bg-[#fbfcfa] p-4 text-sm text-[#52605a]">
+    <p className="rounded-md border border-dashed border-[#cbd5c7] bg-[#fbfcfa] p-4 text-sm text-[#52605a] transition-colors dark:border-border dark:bg-secondary dark:text-muted-foreground">
       {text}
     </p>
   );
