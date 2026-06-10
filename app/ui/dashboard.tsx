@@ -426,9 +426,14 @@ export function Dashboard() {
   function specialResultLabel(name: SpecialFieldName) {
     const resultValue = dashboardData.specialResult?.[name];
     if (resultValue === undefined) return "";
-    if (name === "ownGoals" || name === "redCards") return String(resultValue);
-    if (name.endsWith("TeamId")) return teamLabelById.get(String(resultValue)) ?? "Resposta removida";
-    return playerLabelById.get(String(resultValue)) ?? "Resposta removida";
+    const values = Array.isArray(resultValue) ? resultValue : [resultValue];
+    return values
+      .map((value) => {
+        if (name === "ownGoals" || name === "redCards") return String(value);
+        if (name.endsWith("TeamId")) return teamLabelById.get(String(value)) ?? "Resposta removida";
+        return playerLabelById.get(String(value)) ?? "Resposta removida";
+      })
+      .join(" ou ");
   }
 
   function specialFieldFeedback(name: SpecialFieldName) {
@@ -448,7 +453,8 @@ export function Dashboard() {
       );
     }
 
-    if (betValue === resultValue) {
+    const acceptedResults = Array.isArray(resultValue) ? resultValue : [resultValue];
+    if (acceptedResults.includes(betValue)) {
       return <SpecialAnswerFeedback tone="correct" text={`Certo. +${points} pts.`} />;
     }
 

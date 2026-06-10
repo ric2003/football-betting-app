@@ -44,6 +44,14 @@ const specialFields = {
   redCards: v.number(),
 };
 
+const specialResultFields = {
+  ...specialFields,
+  topScorerPlayerId: v.union(v.id("players"), v.array(v.id("players"))),
+  topAssisterPlayerId: v.union(v.id("players"), v.array(v.id("players"))),
+  mostGoalsTeamId: v.union(v.id("teams"), v.array(v.id("teams"))),
+  fewestConcededTeamId: v.union(v.id("teams"), v.array(v.id("teams"))),
+};
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -103,7 +111,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
   specialResults: defineTable({
-    ...specialFields,
+    ...specialResultFields,
     updatedAt: v.number(),
   }),
 });
