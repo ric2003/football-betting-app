@@ -2,6 +2,7 @@ import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
 import type { DataModel } from "./_generated/dataModel";
+import { PasswordResetEmail } from "./passwordReset";
 
 function cleanText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -10,6 +11,7 @@ function cleanText(value: unknown) {
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password<DataModel>({
+      reset: PasswordResetEmail,
       profile(params) {
         const flow = cleanText(params.flow);
         const email = cleanText(params.email).toLowerCase();

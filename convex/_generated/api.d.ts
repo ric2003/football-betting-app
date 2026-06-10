@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as betting from "../betting.js";
 import type * as http from "../http.js";
+import type * as passwordReset from "../passwordReset.js";
 
 import type {
   ApiFromModules,
@@ -22,6 +23,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   betting: typeof betting;
   http: typeof http;
+  passwordReset: typeof passwordReset;
 }>;
 
 /**
