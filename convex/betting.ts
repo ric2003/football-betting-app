@@ -477,6 +477,12 @@ export const playerProfile = query({
     const playersById = new Map(playersRows.map((player) => [player._id, player]));
     const betsByMatch = new Map(bets.map((bet) => [bet.matchId, bet]));
     const now = Date.now();
+    const firstKickoffAt = matches.reduce<number | null>(
+      (earliest, match) =>
+        earliest === null || match.kickoffAt < earliest ? match.kickoffAt : earliest,
+      null,
+    );
+    const specialBetsAreClosed = firstKickoffAt !== null && firstKickoffAt <= now;
 
     const visibleMatches = await Promise.all(
       matches
@@ -522,16 +528,17 @@ export const playerProfile = query({
     }
 
     const specialBreakdown =
-      specialBet && specialResult
+      specialBet && specialBetsAreClosed
         ? (Object.keys(specialPoints) as Array<keyof typeof specialPoints>).map((key) => {
             const betValue = specialBet[key];
-            const resultValue = specialResult[key];
+            const resultValue = specialResult?.[key];
             const isTeam = key.endsWith("TeamId");
             const isPlayer = key.endsWith("PlayerId");
             const formatValue = (value: typeof betValue | typeof resultValue): string => {
               if (Array.isArray(value)) {
                 return value.map((item) => formatValue(item)).join(" ou ");
               }
+              if (value === undefined) return "";
               if (typeof value === "number") return String(value);
               if (isTeam) return teamLabel(value as Id<"teams">);
               if (isPlayer) return playerLabel(value as Id<"players">);
@@ -542,10 +549,10 @@ export const playerProfile = query({
               key,
               label: specialLabels[key],
               bet: formatValue(betValue),
-              result: formatValue(resultValue),
-              points: scoreSpecialField(specialBet, specialResult, key),
+              result: specialResult ? formatValue(resultValue) : null,
+              points: specialResult ? scoreSpecialField(specialBet, specialResult, key) : 0,
               maxPoints: specialPoints[key],
-              correct: isCorrectSpecialAnswer(specialBet, specialResult, key),
+              correct: specialResult ? isCorrectSpecialAnswer(specialBet, specialResult, key) : null,
             };
           })
         : [];
@@ -569,6 +576,7 @@ export const playerProfile = query({
       ),
       specialBreakdown,
       specialsAreResolved: specialResult !== null,
+      specialsAreClosed: specialBetsAreClosed,
       hiddenMatchCount: matches.filter(
         (match) => match.status !== "finished" && match.kickoffAt > now,
       ).length,

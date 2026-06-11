@@ -149,7 +149,7 @@ export function PlayerProfile({ userId }: { userId: string }) {
             <div>
               <h2 className="text-xl font-black">Apostas Especiais</h2>
               <p className="text-sm text-[#52605a] dark:text-muted-foreground">
-                Só são reveladas quando houver resultado oficial.
+                São reveladas quando as apostas fecham. Os pontos aparecem com o resultado oficial.
               </p>
             </div>
             <span className="rounded-md bg-[#fff3d7] px-3 py-2 text-sm font-bold text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
@@ -166,7 +166,9 @@ export function PlayerProfile({ userId }: { userId: string }) {
               <p className="rounded-md border border-dashed border-[#cbd5c7] bg-[#fbfcfa] p-4 text-sm text-[#52605a] dark:border-border dark:bg-secondary dark:text-muted-foreground md:col-span-2">
                 {profile.specialsAreResolved
                   ? "Sem apostas especiais registadas."
-                  : "As Apostas Especiais ainda estão escondidas."}
+                  : profile.specialsAreClosed
+                    ? "Sem apostas especiais registadas."
+                    : "As Apostas Especiais ainda estão escondidas."}
               </p>
             )}
           </div>
@@ -352,21 +354,27 @@ function SpecialRow({ item }: { item: SpecialBreakdown }) {
           <p className="mt-1 text-sm text-[#52605a] dark:text-muted-foreground">
             Palpite: {item.bet}
           </p>
-          {!item.correct ? (
+          {item.result ? (
             <p className="mt-1 text-sm text-[#52605a] dark:text-muted-foreground">
               Certo: {item.result}
             </p>
           ) : null}
         </div>
-        <span
-          className={`shrink-0 rounded-md px-2 py-1 text-sm font-black ${
-            item.correct
-              ? "bg-[#eaf4ef] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]"
-              : "bg-[#eef2eb] text-[#52605a] dark:bg-secondary dark:text-muted-foreground"
-          }`}
-        >
-          {signedPoints(item.points)}/{item.maxPoints}
-        </span>
+        {item.correct === null ? (
+          <span className="shrink-0 rounded-md bg-[#fff3d7] px-2 py-1 text-sm font-black text-[#7b5613] dark:bg-[#33270d] dark:text-[#f5c542]">
+            Pendente
+          </span>
+        ) : (
+          <span
+            className={`shrink-0 rounded-md px-2 py-1 text-sm font-black ${
+              item.correct
+                ? "bg-[#eaf4ef] text-[#16735f] dark:bg-[#103d32] dark:text-[#7ee0c3]"
+                : "bg-[#eef2eb] text-[#52605a] dark:bg-secondary dark:text-muted-foreground"
+            }`}
+          >
+            {signedPoints(item.points)}/{item.maxPoints}
+          </span>
+        )}
       </div>
     </article>
   );
