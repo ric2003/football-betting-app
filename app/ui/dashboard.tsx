@@ -230,6 +230,39 @@ function formatKickoff(value: number) {
   }).format(value);
 }
 
+function portugalDateParts(value: number) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    year: Number(byType.year),
+    month: Number(byType.month),
+    day: Number(byType.day),
+  };
+}
+
+function formatRelativeKickoff(value: number, now: number) {
+  const date = portugalDateParts(value);
+  const currentDate = portugalDateParts(now);
+  const valueDay = Date.UTC(date.year, date.month - 1, date.day);
+  const currentDay = Date.UTC(currentDate.year, currentDate.month - 1, currentDate.day);
+  const dayDifference = Math.round((valueDay - currentDay) / 86_400_000);
+  const time = new Intl.DateTimeFormat("pt-PT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Lisbon",
+  }).format(value);
+
+  if (dayDifference === 0) return `Hoje, ${time}`;
+  if (dayDifference === 1) return `Amanhã, ${time}`;
+
+  return formatKickoff(value);
+}
+
 function toNumber(value: FormDataEntryValue | null) {
   return Number.parseInt(String(value ?? ""), 10);
 }
@@ -268,13 +301,8 @@ function sectionKeyForMatch(match: MatchRow) {
 }
 
 function nextRelevantSectionKey(matches: MatchRow[], now: number) {
-  const liveMatch = matches
-    .filter((match) => match.displayStatus === "live")
-    .toSorted((a, b) => a.kickoffAt - b.kickoffAt)[0];
-  if (liveMatch) return sectionKeyForMatch(liveMatch);
-
   const nextMatch = matches
-    .filter((match) => match.displayStatus === "scheduled" && match.kickoffAt >= now)
+    .filter((match) => match.kickoffAt >= now)
     .toSorted((a, b) => a.kickoffAt - b.kickoffAt)[0];
   if (nextMatch) return sectionKeyForMatch(nextMatch);
 
@@ -284,6 +312,13 @@ function nextRelevantSectionKey(matches: MatchRow[], now: number) {
 
 function sectionTypeLabel(section: MatchSection) {
   return section.key.startsWith("group-") ? "Grupo" : "Eliminatória";
+}
+
+function sectionScheduleLabel(section: MatchSection, now: number) {
+  const nextMatch = section.matches.find((match) => match.kickoffAt >= now);
+  if (nextMatch) return `Próximo: ${formatRelativeKickoff(nextMatch.kickoffAt, now)}`;
+
+  return "Sem jogos futuros";
 }
 
 export function Dashboard() {
@@ -577,6 +612,7 @@ export function Dashboard() {
                       key={section.key}
                       section={section}
                       isOpen={openSections.has(section.key)}
+                      now={now}
                       onToggle={() => toggleSection(section.key)}
                     />
                   ))
@@ -975,16 +1011,18 @@ function DockNavButton({
 function MatchSectionPanel({
   section,
   isOpen,
+  now,
   onToggle,
 }: {
   section: MatchSection;
   isOpen: boolean;
+  now: number;
   onToggle: () => void;
 }) {
   const openMatches = section.matches.filter((match) => match.displayStatus === "scheduled").length;
   const liveMatches = section.matches.filter((match) => match.displayStatus === "live").length;
   const betMatches = section.matches.filter((match) => match.bet !== null).length;
-  const firstKickoff = formatKickoff(section.matches[0].kickoffAt);
+  const scheduleLabel = sectionScheduleLabel(section, now);
   const typeLabel = sectionTypeLabel(section);
 
   return (
@@ -1011,7 +1049,7 @@ function MatchSectionPanel({
             <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-medium text-[#52605a] dark:text-muted-foreground">
               <span>{section.matches.length} Jogo{section.matches.length > 1 ? "s" : ""}</span>
               <span className="text-[#8a958f]">·</span>
-              <span>Primeiro: {firstKickoff}</span>
+              <span>{scheduleLabel}</span>
             </span>
           </span>
         </span>

@@ -200,6 +200,39 @@ function formatKickoff(value: number) {
   }).format(value);
 }
 
+function portugalDateParts(value: number) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    year: Number(byType.year),
+    month: Number(byType.month),
+    day: Number(byType.day),
+  };
+}
+
+function formatRelativeKickoff(value: number, now: number) {
+  const date = portugalDateParts(value);
+  const currentDate = portugalDateParts(now);
+  const valueDay = Date.UTC(date.year, date.month - 1, date.day);
+  const currentDay = Date.UTC(currentDate.year, currentDate.month - 1, currentDate.day);
+  const dayDifference = Math.round((valueDay - currentDay) / 86_400_000);
+  const time = new Intl.DateTimeFormat("pt-PT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Lisbon",
+  }).format(value);
+
+  if (dayDifference === 0) return `hoje, ${time}`;
+  if (dayDifference === 1) return `amanha, ${time}`;
+
+  return formatKickoff(value);
+}
+
 function groupMatchSections(matches: MatchRow[]) {
   const sections = new Map<string, MatchSection>();
 
@@ -227,6 +260,13 @@ function groupMatchSections(matches: MatchRow[]) {
       ),
     }))
     .toSorted((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+}
+
+function sectionScheduleLabel(section: MatchSection, now: number) {
+  const nextMatch = section.matches.find((match) => match.kickoffAt >= now);
+  if (nextMatch) return `proximo: ${formatRelativeKickoff(nextMatch.kickoffAt, now)}`;
+
+  return "sem jogos futuros";
 }
 
 export function AdminPanel() {
@@ -582,6 +622,7 @@ export function AdminPanel() {
                       section={section}
                       teams={teams}
                       isOpen={openMatchSections.has(section.key)}
+                      now={now}
                       onToggle={() => toggleMatchSection(section.key)}
                     />
                   ))}
@@ -785,15 +826,18 @@ function AdminMatchSectionPanel({
   section,
   teams,
   isOpen,
+  now,
   onToggle,
 }: {
   section: MatchSection;
   teams: TeamRow[];
   isOpen: boolean;
+  now: number;
   onToggle: () => void;
 }) {
   const liveMatches = section.matches.filter((match) => match.displayStatus === "live").length;
   const finishedMatches = section.matches.filter((match) => match.displayStatus === "finished").length;
+  const scheduleLabel = sectionScheduleLabel(section, now);
 
   return (
     <section className="rounded-md border border-[#edf1ea] bg-white transition-colors dark:border-border dark:bg-card">
@@ -813,7 +857,7 @@ function AdminMatchSectionPanel({
           <span className="min-w-0">
             <span className="block font-semibold">{section.title}</span>
             <span className="block text-xs text-[#52605a] dark:text-muted-foreground">
-              {section.matches.length} jogos · primeiro: {formatKickoff(section.matches[0].kickoffAt)}
+              {section.matches.length} jogos · {scheduleLabel}
             </span>
           </span>
         </span>
