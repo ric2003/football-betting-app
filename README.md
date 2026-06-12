@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# World Cup Bets 2026
 
-## Getting Started
+Uma liga de palpites para acompanhar o Mundial 2026 com uma classificação sempre à vista.
 
-First, run the development server:
+Cada jogador tenta adivinhar os resultados dos jogos, escolhe os grandes destaques do torneio e vai somando pontos ao longo da competição. No fim, ganha quem percebeu mais de bola, teve mais sorte, ou soube fingir melhor que tudo fazia parte do plano.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Como Funciona
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Cria a tua conta e entra na liga.
+2. Faz os teus palpites para cada jogo antes do apito inicial.
+3. Acompanha os pontos depois dos resultados finais.
+4. Consulta o ranking para ver quem está no topo.
+5. Revê o perfil de cada jogador para espreitar o histórico de palpites.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Pontuação
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Resultado certo: 3 pontos.
+- Resultado exato: 5 pontos.
+- Em caso de empate na classificação, fica à frente quem tiver mais resultados exatos.
+- Os palpites contam apenas para os primeiros 90 minutos, sem prolongamento nem penáltis.
 
-## Learn More
+## Apostas Especiais
 
-To learn more about Next.js, take a look at the following resources:
+Antes do primeiro jogo do Mundial, cada jogador também pode apostar nos grandes prémios e estatísticas do torneio:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Vencedor do Mundial
+- MVP
+- MVP Jovem
+- Melhor marcador
+- Melhor assistente
+- Equipa com mais golos marcados
+- Equipa com menos golos sofridos
+- Número de auto-golos
+- Número de cartões vermelhos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Estas apostas valem pontos extra e podem mudar completamente a classificação no fim.
 
-## Deploy on Vercel
+## Ranking
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+O ranking junta os pontos dos jogos, os resultados exatos e as apostas especiais. Dá para ver quem está em primeiro, quem está a subir, e quem vai precisar de um milagre na próxima jornada.
